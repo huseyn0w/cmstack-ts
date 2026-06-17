@@ -1,0 +1,30 @@
+{
+  "name": "typress",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typress — an open-source, WordPress-style CMS built entirely in TypeScript.",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "typecheck": "pnpm -r --filter \"./packages/*\" build && pnpm -r typecheck",
+    "db:generate": "pnpm --filter @typress/db generate",
+    "db:migrate": "pnpm --filter @typress/db migrate",
+    "db:seed": "pnpm --filter @typress/db seed"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@playwright/test": "1.49.1",
+    "typescript": "5.7.3",
+    "vitest": "2.1.8"
+  }
+}

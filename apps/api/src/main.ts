@@ -1,0 +1,18 @@
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { parseEnv } from '@typress/config';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const env = parseEnv();
+  const app = await NestFactory.create(AppModule);
+
+  // Permissive CORS for the foundation phase; locked down to the web origin
+  // once authentication lands (Phase 1).
+  app.enableCors();
+
+  await app.listen(env.API_PORT, '0.0.0.0');
+  console.log(`Typress API listening on http://localhost:${env.API_PORT}`);
+}
+
+bootstrap();

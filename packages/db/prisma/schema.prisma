@@ -1,0 +1,23 @@
+// Typress database schema.
+//
+// PostgreSQL is the default. Access goes exclusively through Prisma and the
+// schema is kept DB-agnostic so MySQL works for shared hosting. Domain models
+// (users, content, media, ...) arrive in later phases; Phase 0 establishes the
+// connection only.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Foundation-phase marker table. It exists so the schema generates a client and
+/// the seed/readiness path exercises a real read/write round-trip. Domain models
+/// (users, content, media, ...) replace the need for it in later phases.
+model HealthCheck {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+}

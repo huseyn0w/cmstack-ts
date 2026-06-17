@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-typress}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-typress}
+      POSTGRES_DB: ${POSTGRES_DB:-typress}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-typress} -d ${POSTGRES_DB:-typress}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-typress}:${POSTGRES_PASSWORD:-typress}@db:5432/${POSTGRES_DB:-typress}?schema=public
+    ports:
+      - "4000:4000"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      # Browser-facing API URL.
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      # Server-side (container-to-container) API URL.
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:

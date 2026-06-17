@@ -1,0 +1,37 @@
+import { describe, expect, it } from 'vitest';
+import { parseEnv } from './env';
+
+const valid = {
+  DATABASE_URL: 'postgresql://typress:typress@localhost:5432/typress?schema=public',
+};
+
+describe('parseEnv', () => {
+  it('parses a minimal valid environment and applies defaults', () => {
+    const env = parseEnv(valid);
+    expect(env.NODE_ENV).toBe('development');
+    expect(env.API_PORT).toBe(4000);
+    expect(env.NEXT_PUBLIC_API_URL).toBe('http://localhost:4000');
+    expect(env.DATABASE_URL).toBe(valid.DATABASE_URL);
+  });
+
+  it('coerces a numeric port string to a number', () => {
+    const env = parseEnv({ ...valid, API_PORT: '5001' });
+    expect(env.API_PORT).toBe(5001);
+  });
+
+  it('accepts a known NODE_ENV value', () => {
+    expect(parseEnv({ ...valid, NODE_ENV: 'production' }).NODE_ENV).toBe('production');
+  });
+
+  it('throws a readable error when DATABASE_URL is missing', () => {
+    expect(() => parseEnv({})).toThrowError(/DATABASE_URL/);
+  });
+
+  it('throws when DATABASE_URL is not a valid URL', () => {
+    expect(() => parseEnv({ ...valid, DATABASE_URL: 'not-a-url' })).toThrowError(/DATABASE_URL/);
+  });
+
+  it('throws when NODE_ENV is not one of the allowed values', () => {
+    expect(() => parseEnv({ ...valid, NODE_ENV: 'staging' })).toThrowError(/NODE_ENV/);
+  });
+});
