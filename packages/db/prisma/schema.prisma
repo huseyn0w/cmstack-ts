@@ -1,9 +1,7 @@
 // Typress database schema.
 //
 // PostgreSQL is the default. Access goes exclusively through Prisma and the
-// schema is kept DB-agnostic so MySQL works for shared hosting. Domain models
-// (users, content, media, ...) arrive in later phases; Phase 0 establishes the
-// connection only.
+// schema is kept DB-agnostic so MySQL works for shared hosting.
 
 generator client {
   provider = "prisma-client-js"
@@ -14,10 +12,54 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Foundation-phase marker table. It exists so the schema generates a client and
-/// the seed/readiness path exercises a real read/write round-trip. Domain models
-/// (users, content, media, ...) replace the need for it in later phases.
-model HealthCheck {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
+// --- Accounts (Phase 1) ------------------------------------------------------
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  /// Argon2id hash. Null for users who only sign in via an OAuth provider.
+  passwordHash String?
+  image        String?
+  emailVerified DateTime?
+  roleId       String?
+  role         Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  accounts     Account[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([roleId])
+}
+
+/// Links a user to an external OAuth identity (Google, GitHub, ...).
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  permissions Permission[]
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+/// A granular (action, subject) permission, mapped 1:1 to a CASL rule.
+model Permission {
+  id      String @id @default(cuid())
+  action  String
+  subject String
+  roles   Role[]
+
+  @@unique([action, subject])
 }

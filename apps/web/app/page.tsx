@@ -10,6 +10,25 @@ export default function HomePage() {
         padding: '2rem',
       }}
     >
+      <nav
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          padding: '1.25rem 2rem',
+          display: 'flex',
+          gap: '1.25rem',
+          fontSize: 14,
+        }}
+      >
+        <Link href="/signin" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
+          Sign in
+        </Link>
+        <Link href="/account" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
+          Account
+        </Link>
+      </nav>
+
       <div style={{ maxWidth: 640, textAlign: 'center' }}>
         <p
           style={{

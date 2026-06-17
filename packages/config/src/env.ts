@@ -14,8 +14,17 @@ export const envSchema = z.object({
   // API (NestJS)
   API_PORT: z.coerce.number().int().positive().default(4000),
 
+  // Secret used to sign/verify API JWTs (shared with the web app's Auth.js).
+  AUTH_SECRET: z.string().min(16, 'AUTH_SECRET must be at least 16 characters'),
+  // How long an issued API access token stays valid.
+  AUTH_TOKEN_TTL: z.string().default('7d'),
+  // Shared secret guarding server-to-server endpoints (e.g. OAuth upsert).
+  INTERNAL_API_SECRET: z.string().min(16, 'INTERNAL_API_SECRET must be at least 16 characters'),
+
   // Web (Next.js) — browser-facing API base URL.
   NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:4000'),
+  // Origin allowed to call the API from the browser (CORS).
+  WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
 });
 
 export type Env = z.infer<typeof envSchema>;

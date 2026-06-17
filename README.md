@@ -53,6 +53,31 @@ pnpm --filter @typress/db migrate:dev  # apply migrations
 pnpm dev                               # runs web, api, mcp + package watchers
 ```
 
+## Authentication & roles (Phase 1)
+
+The **API is the source of truth for identity** (User/Role/Permission, Argon2id password
+hashing, HS256 JWTs). The **web app uses Auth.js v5** as the session/social layer: a
+Credentials provider calls the API, and the API access token is carried in the Auth.js
+session for server-side calls. Authorization is enforced on the API with **CASL** —
+permissions are `(action, subject)` pairs; routes are gated with a `PoliciesGuard`.
+
+Seeded roles: **Administrator** (`manage all`), **Editor** (`read Admin`, `manage User`),
+**Member** (default for sign-ups, no admin access). After `pnpm db:seed` you can sign in
+with the seeded admin:
+
+```
+email:    admin@typress.local
+password: admin12345         # local dev only — set SEED_ADMIN_PASSWORD and change in prod
+```
+
+Try it: visit `/signup` to create a Member account → `/account` shows your role; the
+seeded admin can reach the role-gated `GET /api/admin/overview`, a Member gets `403`.
+
+**Social login (optional):** set `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` and/or
+`AUTH_GITHUB_ID` + `AUTH_GITHUB_SECRET` to enable those providers (callback URL
+`/<origin>/api/auth/callback/<provider>`). Leave them blank to disable — the buttons
+simply won't appear.
+
 ## Project layout
 
 ```
@@ -85,13 +110,13 @@ fresh-context review, observable behavior in the running app, and updated docs.
 | Phase | Name | Ships |
 | --- | --- | --- |
 | 0 ✅ | Foundation | Monorepo, Docker compose, Prisma + Postgres, Biome, Vitest, Playwright, CI |
-| 1 | Accounts | Users, roles, granular permissions (CASL), Auth.js + social login |
+| 1 ✅ | Accounts | Users, roles, granular permissions (CASL), Argon2id + JWT, Auth.js + social login |
 | 2 | Content core | Posts, pages, categories, tags, revisions; Tiptap (sanitized) |
 | 3 | Media | Media library + uploads (with alt/title metadata) |
 | 4 | Admin UI | Next.js admin panel (own editorial design) |
 | 5 | Theme system | Swappable, runtime-resolved template/component sets |
 | 6 | Plugin system | Typed hook/event registry |
-| 7 | SEO/GEO + i18n | OG + JSON-LD, sitemap.ts, robots.ts, llms.txt, hreflang, next-intl |
+| 7 | SEO/GEO + i18n | OG + JSON-LD, sitemap.ts, robots.ts, llms.txt, hreflang, next-intl; **admin-editable GEO content (CRUD) so AI assistants recommend your services** |
 | 8 | Comments, search, spam | Threaded comments, Postgres FTS, reCAPTCHA v3 + rate limiting |
 | 9 | Public site | Server-rendered editorial frontend, profiles, likes |
 | 10 | AI integration | MCP server with scoped, validated, authenticated tools |

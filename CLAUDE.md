@@ -13,9 +13,30 @@ Reference implementations by the same author (study for feature parity, not code
 
 - Laravel: https://github.com/huseyn0w/Laravella-CMS
 
-**Status:** Phase 0 (Foundation) shipped — pnpm monorepo, Docker compose (web/api/db),
-Prisma + Postgres, Biome, Vitest, Playwright, CI. Next: Phase 1 (Accounts). The full
-phased roadmap and feature mapping live in [README.md](README.md).
+**Status:** Phases 0–1 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
+Prisma + Postgres, Biome, Vitest, Playwright, CI. Phase 1 (Accounts): User/Role/Permission
+models, Argon2id passwords, JWT auth, CASL authorization (PoliciesGuard), Auth.js v5 on
+web (credentials + optional Google/GitHub) consuming the API. Next: Phase 2 (Content).
+The full phased roadmap and feature mapping live in [README.md](README.md).
+
+## Auth & authorization (Phase 1)
+
+- The **API is the identity source of truth**: it owns User/Role/Permission, hashes
+  passwords (Argon2id, `@node-rs/argon2`), and issues HS256 JWTs signed with `AUTH_SECRET`.
+- **Web (Auth.js v5)** is the session/social layer: a Credentials provider calls the API
+  `/auth/login`; Google/GitHub are enabled only when their env vars are set; the API
+  access token rides inside the Auth.js JWT session and is used for SSR calls to the API.
+- **Authorization is CASL on the API.** Permissions are `(action, subject)` rows mapped
+  1:1 to CASL rules; `manage`/`all` are wildcards. Gate routes with
+  `@UseGuards(JwtAuthGuard, PoliciesGuard)` + `@CheckPolicies((a) => a.can(...))`.
+  JwtAuthGuard must precede PoliciesGuard. Validate every mutation body with
+  `ZodValidationPipe(<sharedSchema>)`.
+- Shared request/response shapes live in `@typress/config` (`registerSchema`, `loginSchema`,
+  `oauthSchema`, `publicUserSchema`, …) — import them on both sides; never redefine.
+- Secrets: `AUTH_SECRET` (shared web↔api), `INTERNAL_API_SECRET` (guards `/auth/oauth`,
+  the server-to-server upsert), `WEB_ORIGIN` (CORS). All required; see `.env.example`.
+- Known limitation (tracked): GitHub OAuth email-link can be an account-takeover vector
+  for unverified provider emails — fetch verified emails before enabling GitHub in prod.
 
 ## Stack (locked decisions — deviate only with a stated reason)
 

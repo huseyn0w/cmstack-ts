@@ -3,6 +3,8 @@ import { parseEnv } from './env';
 
 const valid = {
   DATABASE_URL: 'postgresql://typress:typress@localhost:5432/typress?schema=public',
+  AUTH_SECRET: 'test-auth-secret-value',
+  INTERNAL_API_SECRET: 'test-internal-secret-value',
 };
 
 describe('parseEnv', () => {
@@ -33,5 +35,13 @@ describe('parseEnv', () => {
 
   it('throws when NODE_ENV is not one of the allowed values', () => {
     expect(() => parseEnv({ ...valid, NODE_ENV: 'staging' })).toThrowError(/NODE_ENV/);
+  });
+
+  it('throws when AUTH_SECRET is too short', () => {
+    expect(() => parseEnv({ ...valid, AUTH_SECRET: 'short' })).toThrowError(/AUTH_SECRET/);
+  });
+
+  it('defaults AUTH_TOKEN_TTL to 7d', () => {
+    expect(parseEnv(valid).AUTH_TOKEN_TTL).toBe('7d');
   });
 });
