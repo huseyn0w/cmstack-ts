@@ -13,11 +13,14 @@ Reference implementations by the same author (study for feature parity, not code
 
 - Laravel: https://github.com/huseyn0w/Laravella-CMS
 
-**Status:** Phases 0–1 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
+**Status:** Phases 0–2 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
 Prisma + Postgres, Biome, Vitest, Playwright, CI. Phase 1 (Accounts): User/Role/Permission
 models, Argon2id passwords, JWT auth, CASL authorization (PoliciesGuard), Auth.js v5 on
-web (credentials + optional Google/GitHub) consuming the API. Next: Phase 2 (Content).
-The full phased roadmap and feature mapping live in [README.md](README.md).
+web (credentials + optional Google/GitHub) consuming the API. Phase 2 (Content): Post/
+Page/Category/Tag/Revision models, content API with server-side HTML sanitization, slug
+generation, draft/publish, soft-delete, revisions, CASL-gated authoring + public read
+endpoints, and server-rendered `/blog`. Next: Phase 3 (Media). The full phased roadmap
+and feature mapping live in [README.md](README.md).
 
 ## Auth & authorization (Phase 1)
 
@@ -37,6 +40,24 @@ The full phased roadmap and feature mapping live in [README.md](README.md).
   the server-to-server upsert), `WEB_ORIGIN` (CORS). All required; see `.env.example`.
 - Known limitation (tracked): GitHub OAuth email-link can be an account-takeover vector
   for unverified provider emails — fetch verified emails before enabling GitHub in prod.
+
+## Content (Phase 2)
+
+- Models: `Post`, `Page`, `Category` (self-referential tree), `Tag`, `Revision`,
+  `ContentStatus` enum. Posts have categories/tags (m2m); posts & pages have soft-delete
+  (`deletedAt`) and revision history.
+- The `content` NestJS module: one service+controller per resource, plus a
+  `PublicContentController` exposing published, non-trashed content at `/public/posts`,
+  `/public/posts/:slug`, `/public/pages/:slug`. Authoring routes are CASL-gated
+  (`@CheckPolicies((a) => a.can('<action>', 'Post'|'Page'|'Category'|'Tag'))`).
+- **All rich-text `content` is sanitized server-side via `HtmlSanitizerService`
+  (sanitize-html) on every create/update** — the only trusted writer is the seed. The web
+  renders stored content with `dangerouslySetInnerHTML`, relying on that guarantee.
+- Slugs are auto-generated from the title (`slugify`) and de-duplicated; a P2002 race
+  returns 409. Revisions snapshot scalar fields (not taxonomy) of the prior state before
+  each update. `publishedAt` is stamped on first publish and preserved thereafter.
+- Editor role manages all content; Member has no content permissions. Tiptap editor UI
+  is deferred to the admin panel (Phase 4); i18n/SEO-meta fields to Phase 7.
 
 ## Stack (locked decisions — deviate only with a stated reason)
 

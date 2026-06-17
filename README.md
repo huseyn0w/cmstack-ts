@@ -78,6 +78,26 @@ seeded admin can reach the role-gated `GET /api/admin/overview`, a Member gets `
 `/<origin>/api/auth/callback/<provider>`). Leave them blank to disable — the buttons
 simply won't appear.
 
+## Content (Phase 2)
+
+Posts, pages, categories (hierarchical), and tags, with **revisions**, **soft-delete**,
+and draft/publish status. All rich-text HTML is **sanitized server-side** on write
+(sanitize-html), so stored content is safe to render. Authoring endpoints are CASL-gated
+(the **Editor** role manages all content); public, server-rendered reads return only
+published content.
+
+After `pnpm db:seed`, the public blog has sample posts:
+
+- `/blog` — published post index (SSR)
+- `/blog/<slug>` — a post (e.g. `/blog/introducing-typress`)
+
+Authoring API (Bearer token from login; admin/editor only): `POST/PATCH/DELETE /posts`,
+`/pages`, `/categories`, `/tags`; `POST /posts/:id/restore`; `GET /posts/:id/revisions`.
+Public read API: `GET /public/posts`, `/public/posts/:slug`, `/public/pages/:slug`.
+
+> The Tiptap editor UI ships with the admin panel (Phase 4); Phase 2 delivers the content
+> API, data model, and the sanitization pipeline the editor relies on.
+
 ## Project layout
 
 ```
@@ -111,7 +131,7 @@ fresh-context review, observable behavior in the running app, and updated docs.
 | --- | --- | --- |
 | 0 ✅ | Foundation | Monorepo, Docker compose, Prisma + Postgres, Biome, Vitest, Playwright, CI |
 | 1 ✅ | Accounts | Users, roles, granular permissions (CASL), Argon2id + JWT, Auth.js + social login |
-| 2 | Content core | Posts, pages, categories, tags, revisions; Tiptap (sanitized) |
+| 2 ✅ | Content core | Posts, pages, categories, tags, revisions, soft-delete; server-side HTML sanitization; public `/blog` |
 | 3 | Media | Media library + uploads (with alt/title metadata) |
 | 4 | Admin UI | Next.js admin panel (own editorial design) |
 | 5 | Theme system | Swappable, runtime-resolved template/component sets |

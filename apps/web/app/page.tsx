@@ -21,6 +21,9 @@ export default function HomePage() {
           fontSize: 14,
         }}
       >
+        <Link href="/blog" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
+          Blog
+        </Link>
         <Link href="/signin" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
           Sign in
         </Link>

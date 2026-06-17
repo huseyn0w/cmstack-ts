@@ -23,5 +23,8 @@ import { PasswordService } from './password.service';
   ],
   controllers: [AccountsController, AdminController],
   providers: [AccountsService, PasswordService, JwtAuthGuard, PoliciesGuard, InternalSecretGuard],
+  // Exported so other feature modules can reuse the auth guards (which depend on
+  // JwtService + AccountsService) to protect their own routes.
+  exports: [JwtModule, AccountsService, JwtAuthGuard, PoliciesGuard],
 })
 export class AccountsModule {}
