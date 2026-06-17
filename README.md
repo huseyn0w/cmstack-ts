@@ -98,6 +98,21 @@ Public read API: `GET /public/posts`, `/public/posts/:slug`, `/public/pages/:slu
 > The Tiptap editor UI ships with the admin panel (Phase 4); Phase 2 delivers the content
 > API, data model, and the sanitization pipeline the editor relies on.
 
+## Media (Phase 3)
+
+Authenticated upload API with a **swappable storage adapter** (local disk now, S3 later).
+Uploads are size-capped and **type-validated by their actual bytes** (not just the
+client-claimed MIME); allowed types are jpeg/png/gif/webp/pdf (SVG excluded). Image
+dimensions are extracted; alt/title/caption are editable per asset. Files are served at
+`/uploads/<key>` with `X-Content-Type-Options: nosniff`, and the stored extension is
+derived from the validated type so a file can never be served as executable HTML.
+
+Authoring API (admin/editor Bearer token): `POST /media` (multipart `file`),
+`GET /media`, `GET /media/:id`, `PATCH /media/:id` (alt/title/caption), `DELETE /media/:id`.
+
+> **Production:** the upload directory is a Docker volume (`uploads`). Behind nginx,
+> forward `/uploads/*` to the API process, or serve the volume directly from nginx.
+
 ## Project layout
 
 ```
@@ -132,7 +147,7 @@ fresh-context review, observable behavior in the running app, and updated docs.
 | 0 ✅ | Foundation | Monorepo, Docker compose, Prisma + Postgres, Biome, Vitest, Playwright, CI |
 | 1 ✅ | Accounts | Users, roles, granular permissions (CASL), Argon2id + JWT, Auth.js + social login |
 | 2 ✅ | Content core | Posts, pages, categories, tags, revisions, soft-delete; server-side HTML sanitization; public `/blog` |
-| 3 | Media | Media library + uploads (with alt/title metadata) |
+| 3 ✅ | Media | Upload API, swappable storage adapter, content-type validation, image dimensions, per-asset metadata, CASL-gated |
 | 4 | Admin UI | Next.js admin panel (own editorial design) |
 | 5 | Theme system | Swappable, runtime-resolved template/component sets |
 | 6 | Plugin system | Typed hook/event registry |

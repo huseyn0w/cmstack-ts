@@ -18,6 +18,7 @@ const PERMISSIONS = [
   { action: 'manage', subject: 'Page' },
   { action: 'manage', subject: 'Category' },
   { action: 'manage', subject: 'Tag' },
+  { action: 'manage', subject: 'Media' },
 ] as const;
 
 // Roles and the permissions they grant. `Member` is the safe default for new
@@ -38,6 +39,7 @@ const ROLES: Record<
       { action: 'manage', subject: 'Page' },
       { action: 'manage', subject: 'Category' },
       { action: 'manage', subject: 'Tag' },
+      { action: 'manage', subject: 'Media' },
     ],
   },
   Member: {

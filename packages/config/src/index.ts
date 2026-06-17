@@ -52,3 +52,14 @@ export {
   pageDetailSchema,
   type PageDetail,
 } from './content';
+export {
+  ALLOWED_MEDIA_MIME_TYPES,
+  updateMediaSchema,
+  type UpdateMediaInput,
+  mediaListQuerySchema,
+  type MediaListQuery,
+  mediaSchema,
+  type Media,
+  mediaListSchema,
+  type MediaList,
+} from './media';

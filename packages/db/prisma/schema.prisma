@@ -28,6 +28,7 @@ model User {
   posts        Post[]
   pages        Page[]
   revisions    Revision[]
+  media        Media[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -153,4 +154,29 @@ model Revision {
 
   @@index([postId])
   @@index([pageId])
+}
+
+// --- Media (Phase 3) ---------------------------------------------------------
+
+model Media {
+  id           String   @id @default(cuid())
+  /// Stored filename / storage key (unique, generated; never the raw upload name).
+  filename     String   @unique
+  originalName String
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  alt          String?
+  title        String?
+  caption      String?
+  /// Path the file is served at, relative to the API origin (e.g. /uploads/<key>).
+  url          String
+  uploaderId   String?
+  uploader     User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([uploaderId])
+  @@index([createdAt])
 }

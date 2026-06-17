@@ -13,14 +13,16 @@ Reference implementations by the same author (study for feature parity, not code
 
 - Laravel: https://github.com/huseyn0w/Laravella-CMS
 
-**Status:** Phases 0–2 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
+**Status:** Phases 0–3 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
 Prisma + Postgres, Biome, Vitest, Playwright, CI. Phase 1 (Accounts): User/Role/Permission
 models, Argon2id passwords, JWT auth, CASL authorization (PoliciesGuard), Auth.js v5 on
 web (credentials + optional Google/GitHub) consuming the API. Phase 2 (Content): Post/
 Page/Category/Tag/Revision models, content API with server-side HTML sanitization, slug
 generation, draft/publish, soft-delete, revisions, CASL-gated authoring + public read
-endpoints, and server-rendered `/blog`. Next: Phase 3 (Media). The full phased roadmap
-and feature mapping live in [README.md](README.md).
+endpoints, and server-rendered `/blog`. Phase 3 (Media): upload API with a swappable
+storage adapter, content-type validation, image dimensions, per-asset metadata, CASL
+gating, and static serving at `/uploads`. Next: Phase 4 (Admin UI). The full phased
+roadmap and feature mapping live in [README.md](README.md).
 
 ## Auth & authorization (Phase 1)
 
@@ -58,6 +60,23 @@ and feature mapping live in [README.md](README.md).
   each update. `publishedAt` is stamped on first publish and preserved thereafter.
 - Editor role manages all content; Member has no content permissions. Tiptap editor UI
   is deferred to the admin panel (Phase 4); i18n/SEO-meta fields to Phase 7.
+
+## Media (Phase 3)
+
+- `Media` model + a swappable storage abstraction: code depends on the `StorageDriver`
+  interface (`STORAGE` token); `LocalStorageService` writes to `UPLOAD_DIR` today, an S3
+  driver is a one-line provider swap in `StorageModule`.
+- Upload: `POST /media` (multipart, CASL `create Media`). Size capped by `MEDIA_MAX_SIZE_MB`
+  (multer limit + validator). Allowed types: jpeg/png/gif/webp/pdf (`ALLOWED_MEDIA_MIME_TYPES`;
+  **SVG excluded**). The bytes are re-validated (image-size for images, `%PDF-` magic for
+  pdf), not just the client MIME. **The stored file's extension is derived from the
+  validated MIME (`extensionForMime`), never the upload filename** — this prevents a
+  polyglot being served as `text/html` (stored XSS). Files served at `/uploads/<key>` with
+  `X-Content-Type-Options: nosniff`.
+- Storage keys are reduced to a basename (no path traversal). Image width/height are
+  stored; alt/title/caption are editable via `PATCH /media/:id`.
+- Prod: nginx must forward `/uploads/*` to the API process (or serve the `uploads` volume
+  directly, in which case drop `useStaticAssets`).
 
 ## Stack (locked decisions — deviate only with a stated reason)
 

@@ -21,6 +21,10 @@ export const envSchema = z.object({
   // Shared secret guarding server-to-server endpoints (e.g. OAuth upsert).
   INTERNAL_API_SECRET: z.string().min(16, 'INTERNAL_API_SECRET must be at least 16 characters'),
 
+  // Media uploads: directory on disk and the maximum accepted file size (MB).
+  UPLOAD_DIR: z.string().default('uploads'),
+  MEDIA_MAX_SIZE_MB: z.coerce.number().int().positive().max(100).default(10),
+
   // Web (Next.js) — browser-facing API base URL.
   NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:4000'),
   // Origin allowed to call the API from the browser (CORS).
