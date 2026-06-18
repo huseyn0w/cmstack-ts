@@ -1,6 +1,11 @@
 import { AdminShell } from '@/components/admin/admin-shell';
 import { Providers } from '@/components/providers';
-import { canManageSettings, canManageUsers, requireAdminSession } from '@/lib/admin/guard';
+import {
+  canManageSeo,
+  canManageSettings,
+  canManageUsers,
+  requireAdminSession,
+} from '@/lib/admin/guard';
 import type { ReactNode } from 'react';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -13,6 +18,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           user={session.user}
           canManageUsers={canManageUsers(session)}
           canManageSettings={canManageSettings(session)}
+          canManageSeo={canManageSeo(session)}
         >
           {children}
         </AdminShell>

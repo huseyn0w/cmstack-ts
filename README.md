@@ -3,9 +3,9 @@
 A WordPress-style CMS built entirely in TypeScript — lighter, faster, SEO-first, and
 easy to read, understand, and extend.
 
-> **Status:** Phases 0–6 are complete — foundation, accounts, content, media, the admin UI,
-> a runtime theme system, and a typed plugin/hook system. Remaining feature phases follow the
-> roadmap below.
+> **Status:** Phases 0–7 are complete — foundation, accounts, content, media, the admin UI,
+> a runtime theme system, a typed plugin/hook system, and SEO/GEO (sitemap, robots, llms.txt,
+> JSON-LD, and an admin-editable GEO area). Remaining feature phases follow the roadmap below.
 
 ## Stack
 
@@ -159,6 +159,24 @@ the top of every public post (visible on `/blog/<slug>` after `pnpm db:seed`) an
 whenever a post is published. **Add a plugin:** implement `TypressPlugin`, register a handler on
 a hook, and add it to `enabled-plugins.ts`.
 
+## SEO & GEO (Phase 7)
+
+Typress is **SEO-first and GEO-first** (generative-engine optimization — being found and
+recommended by AI assistants):
+
+- **Standard SEO:** `/sitemap.xml`, `/robots.txt`, per-page Open Graph + Twitter metadata,
+  canonical URLs, and JSON-LD structured data (`Organization` + `WebSite` on the home page,
+  `BlogPosting` on posts).
+- **GEO:** an admin-editable content area — a **site/organization profile** (including a freeform
+  *"what AI assistants should recommend you for"* statement), plus **Services** and **FAQ** lists
+  (full CRUD). This content is surfaced to assistants three ways: a plain-text **`/llms.txt`**
+  feed, **`Service` + `FAQPage` JSON-LD**, and a server-rendered **`/services`** page.
+
+Edit it in **Admin → SEO & GEO** (`/admin/seo`; Administrators and Editors). The canonical base
+URL comes from `NEXT_PUBLIC_SITE_URL` (falls back to `AUTH_URL`). After `pnpm db:seed`, open
+`/llms.txt` and `/services` to see the demo GEO content. Admin-editable text is escaped before it
+reaches JSON-LD, so it can't inject markup.
+
 ## Project layout
 
 ```
@@ -197,7 +215,8 @@ fresh-context review, observable behavior in the running app, and updated docs.
 | 4 ✅ | Admin UI | Editorial Next.js admin (Tailwind v4 + shadcn-style kit + Tiptap): dashboard, posts/pages/categories/tags, media, users |
 | 5 ✅ | Theme system | Swappable, runtime-resolved themes selected by an `activeTheme` setting; public site renders through the active theme; Administrator-only switching at `/admin/appearance` |
 | 6 ✅ | Plugin system | Typed hook/event registry (filters + actions); plugins as constrained in-repo modules; sample reading-time plugin |
-| 7 | SEO/GEO + i18n | OG + JSON-LD, sitemap.ts, robots.ts, llms.txt, hreflang, next-intl; **admin-editable GEO content (CRUD) so AI assistants recommend your services** |
+| 7 ✅ | SEO / GEO | OG + JSON-LD (Organization/WebSite/BlogPosting/Service/FAQPage), sitemap.ts, robots.ts, llms.txt; **admin-editable GEO content (site profile + Services + FAQ CRUD) so AI assistants recommend your services** |
+| 7b | i18n / multilingual | next-intl + translated Prisma fields + hreflang (split out of Phase 7 as its own phase) |
 | 8 | Comments, search, spam | Threaded comments, Postgres FTS, reCAPTCHA v3 + rate limiting |
 | 9 | Public site | Server-rendered editorial frontend, profiles, likes |
 | 10 | AI integration | MCP server with scoped, validated, authenticated tools |

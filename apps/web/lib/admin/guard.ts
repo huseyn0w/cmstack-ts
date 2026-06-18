@@ -34,6 +34,16 @@ export function canManageSettings(session: Session): boolean {
   );
 }
 
+/** Returns true if the session grants SEO/GEO management capability. */
+export function canManageSeo(session: Session): boolean {
+  const permissions = session.user.role?.permissions ?? [];
+  return permissions.some(
+    (p) =>
+      (p.action === 'manage' && p.subject === 'all') ||
+      (p.action === 'manage' && p.subject === 'Seo'),
+  );
+}
+
 /**
  * Server-only guard for /admin routes.
  * Redirects to /signin if unauthenticated, to / if not admin-capable.

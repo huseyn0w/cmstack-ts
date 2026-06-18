@@ -22,6 +22,7 @@ import {
   LogOut,
   Menu,
   Palette,
+  Search,
   Tag,
   Users,
 } from 'lucide-react';
@@ -40,6 +41,7 @@ interface AdminShellProps {
   user: User;
   canManageUsers: boolean;
   canManageSettings: boolean;
+  canManageSeo: boolean;
 }
 
 interface NavItem {
@@ -53,7 +55,11 @@ interface NavGroup {
   items: NavItem[];
 }
 
-function buildNavGroups(canManageUsers: boolean, canManageSettings: boolean): NavGroup[] {
+function buildNavGroups(
+  canManageUsers: boolean,
+  canManageSettings: boolean,
+  canManageSeo: boolean,
+): NavGroup[] {
   const groups: NavGroup[] = [
     {
       heading: 'Dashboard',
@@ -115,17 +121,23 @@ function buildNavGroups(canManageUsers: boolean, canManageSettings: boolean): Na
     });
   }
 
+  const siteItems: NavItem[] = [];
   if (canManageSettings) {
-    groups.push({
-      heading: 'Site',
-      items: [
-        {
-          label: 'Appearance',
-          href: '/admin/appearance',
-          icon: <Palette className="h-4 w-4" />,
-        },
-      ],
+    siteItems.push({
+      label: 'Appearance',
+      href: '/admin/appearance',
+      icon: <Palette className="h-4 w-4" />,
     });
+  }
+  if (canManageSeo) {
+    siteItems.push({
+      label: 'SEO & GEO',
+      href: '/admin/seo',
+      icon: <Search className="h-4 w-4" />,
+    });
+  }
+  if (siteItems.length > 0) {
+    groups.push({ heading: 'Site', items: siteItems });
   }
 
   return groups;
@@ -150,6 +162,7 @@ function getSectionLabel(pathname: string): string {
   if (pathname.startsWith('/admin/media')) return 'Media';
   if (pathname.startsWith('/admin/users')) return 'Users';
   if (pathname.startsWith('/admin/appearance')) return 'Appearance';
+  if (pathname.startsWith('/admin/seo')) return 'SEO & GEO';
   return 'Admin';
 }
 
@@ -192,14 +205,16 @@ function Sidebar({
   user,
   canManageUsers,
   canManageSettings,
+  canManageSeo,
   onClose,
 }: {
   user: User;
   canManageUsers: boolean;
   canManageSettings: boolean;
+  canManageSeo: boolean;
   onClose?: () => void;
 }) {
-  const navGroups = buildNavGroups(canManageUsers, canManageSettings);
+  const navGroups = buildNavGroups(canManageUsers, canManageSettings, canManageSeo);
 
   return (
     <div className="flex flex-col h-full">
@@ -253,7 +268,13 @@ function Sidebar({
   );
 }
 
-export function AdminShell({ children, user, canManageUsers, canManageSettings }: AdminShellProps) {
+export function AdminShell({
+  children,
+  user,
+  canManageUsers,
+  canManageSettings,
+  canManageSeo,
+}: AdminShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const sectionLabel = getSectionLabel(pathname);
@@ -267,6 +288,7 @@ export function AdminShell({ children, user, canManageUsers, canManageSettings }
           user={user}
           canManageUsers={canManageUsers}
           canManageSettings={canManageSettings}
+          canManageSeo={canManageSeo}
         />
       </aside>
 
@@ -281,6 +303,7 @@ export function AdminShell({ children, user, canManageUsers, canManageSettings }
               user={user}
               canManageUsers={canManageUsers}
               canManageSettings={canManageSettings}
+              canManageSeo={canManageSeo}
               onClose={() => setMobileOpen(false)}
             />
           </div>

@@ -40,6 +40,9 @@ export function EditorialLayout({ children }: { children: ReactNode }) {
           <Link href="/blog" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
             Blog
           </Link>
+          <Link href="/services" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
+            Services
+          </Link>
           <Link href="/signin" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
             Sign in
           </Link>

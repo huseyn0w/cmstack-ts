@@ -61,6 +61,9 @@ export function MagazineLayout({ children }: { children: ReactNode }) {
           <Link href="/blog" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
             Blog
           </Link>
+          <Link href="/services" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
+            Services
+          </Link>
           <Link href="/signin" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
             Sign in
           </Link>

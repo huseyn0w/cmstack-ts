@@ -5,6 +5,7 @@ import { HealthModule } from './health/health.module';
 import { MediaModule } from './media/media.module';
 import { PluginsModule } from './plugins/plugins.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SeoModule } from './seo/seo.module';
 import { SettingsModule } from './settings/settings.module';
 
 @Module({
@@ -16,6 +17,7 @@ import { SettingsModule } from './settings/settings.module';
     MediaModule,
     SettingsModule,
     PluginsModule,
+    SeoModule,
   ],
 })
 export class AppModule {}

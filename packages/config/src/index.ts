@@ -70,6 +70,26 @@ export {
   type ThemeSetting,
 } from './settings';
 export {
+  updateSiteProfileSchema,
+  type UpdateSiteProfileInput,
+  siteProfileSchema,
+  type SiteProfile,
+  createServiceSchema,
+  type CreateServiceInput,
+  updateServiceSchema,
+  type UpdateServiceInput,
+  serviceSchema,
+  type Service,
+  createFaqSchema,
+  type CreateFaqInput,
+  updateFaqSchema,
+  type UpdateFaqInput,
+  faqSchema,
+  type Faq,
+  seoContentSchema,
+  type SeoContent,
+} from './seo';
+export {
   ALLOWED_MEDIA_MIME_TYPES,
   updateMediaSchema,
   type UpdateMediaInput,

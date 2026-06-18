@@ -13,7 +13,7 @@ Reference implementations by the same author (study for feature parity, not code
 
 - Laravel: https://github.com/huseyn0w/Laravella-CMS
 
-**Status:** Phases 0–6 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
+**Status:** Phases 0–7 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
 Prisma + Postgres, Biome, Vitest, Playwright, CI. Phase 1 (Accounts): User/Role/Permission
 models, Argon2id passwords, JWT auth, CASL authorization (PoliciesGuard), Auth.js v5 on
 web (credentials + optional Google/GitHub) consuming the API. Phase 2 (Content): Post/
@@ -29,8 +29,12 @@ Phase 5 (Theme system): runtime-resolved, swappable public themes selected by an
 theme; Administrator-only switching from `/admin/appearance`. Phase 6 (Plugin system): a
 typed hook/event registry on the API (filters transform values, actions fire events),
 plugins as in-repo modules with a constrained `PluginApi` (not arbitrary code injection),
-plus a sample `reading-time` plugin. Next: Phase 7 (SEO/GEO + i18n). The full phased
-roadmap and feature mapping live in [README.md](README.md).
+plus a sample `reading-time` plugin. Phase 7 (SEO/GEO): sitemap/robots/llms.txt, Open Graph
++ JSON-LD (Organization/WebSite/BlogPosting/Service/FAQPage), and an admin-editable GEO area
+(site profile + Services + FAQ CRUD) surfaced to AI assistants via llms.txt, JSON-LD, and a
+server-rendered `/services` page. **i18n/multilingual was split out into its own later phase.**
+Next: Phase 8 (Comments, search, spam). The full phased roadmap and feature mapping live in
+[README.md](README.md).
 
 ## Auth & authorization (Phase 1)
 
@@ -156,6 +160,28 @@ roadmap and feature mapping live in [README.md](README.md).
   write-time-sanitized content) and logs on publish.
 - Add a plugin: implement `TypressPlugin`, add it to `enabled-plugins.ts`. New extension points
   = add a hook to `FilterMap`/`ActionMap` and call `applyFilters`/`emit` at the right spot.
+
+## SEO / GEO (Phase 7)
+
+- **API (`seo` module)** owns SEO/GEO content: a singleton `SiteProfile` (org name, tagline,
+  description, url, logo, **`geoStatement`**), plus `Service` and `FaqItem` CRUD. Admin routes
+  `/seo/*` are CASL-gated on a new subject **`Seo`** (`read`/`create`/`update`/`delete`),
+  seeded to **Administrator + Editor** (SEO is editorial). `GET /public/seo` is unauthenticated
+  (SSR needs it). All SEO/GEO text is **plain text** — no HTML, so nothing to sanitize.
+- **Web SEO surfaces** (`apps/web/lib/seo/*` pure builders, unit-tested):
+  - `app/sitemap.ts` (static routes + all published posts, paged), `app/robots.ts` (allow
+    crawlers incl. AI bots; disallow admin/auth), `app/llms.txt/route.ts` (`text/plain` GEO feed
+    built from the profile + services + FAQ + posts).
+  - `generateMetadata` in the root layout sets `metadataBase`/title-template/OG/Twitter from the
+    profile; pages set their own `title`/canonical; blog posts add `article` OG.
+  - JSON-LD via `<JsonLd>` (`lib/seo/json-ld.tsx`): Organization + WebSite on home, BlogPosting
+    on posts, Service (ItemList) + FAQPage on `/services`. **Security: `<JsonLd>` escapes every
+    `<` to `<`** so admin-editable fields can't break out of the `<script>` (stored XSS).
+  - `siteUrl` (`lib/seo/site.ts`) is `NEXT_PUBLIC_SITE_URL` ?? `AUTH_URL` ?? localhost, validated
+    (a malformed env falls back, so it can't crash metadata generation).
+- **GEO feature**: the admin **SEO & GEO** screen (`/admin/seo`, gated by `canManageSeo`) edits
+  the profile/`geoStatement` + Services + FAQ via Server Actions; the public `/services` page
+  (rendered through the active theme) + llms.txt + JSON-LD surface them to AI assistants.
 
 ## Stack (locked decisions — deviate only with a stated reason)
 

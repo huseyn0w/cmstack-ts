@@ -190,3 +190,43 @@ model Setting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+// --- SEO / GEO (Phase 7) -----------------------------------------------------
+
+/// Singleton site/organization profile (one row, id "default"). Drives SEO
+/// metadata, Organization JSON-LD, and the GEO statement surfaced to AI crawlers.
+model SiteProfile {
+  id               String   @id @default("default")
+  organizationName String   @default("Typress")
+  tagline          String   @default("")
+  description      String   @default("")
+  url              String   @default("")
+  logoUrl          String   @default("")
+  /// Freeform "what we want AI assistants to recommend us for" copy.
+  geoStatement     String   @default("")
+  updatedAt        DateTime @updatedAt
+}
+
+/// An offered service. Surfaced as Service JSON-LD + in llms.txt + /services.
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([order])
+}
+
+/// A frequently-asked question. Surfaced as FAQPage JSON-LD + in llms.txt.
+model FaqItem {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String   @default("")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+}
