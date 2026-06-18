@@ -58,6 +58,27 @@
   --ring: #e8c372;
 }
 
+/* ---------------------------------------------------------------------------
+   Public theme palettes (Phase 5). Each theme's chrome wrapper carries its
+   class and sets the public tokens (--bg/--fg/--muted/--accent/--line) for its
+   subtree only. These are scoped to the themed wrapper so they never leak into
+   the admin token system (--background/--foreground/...).
+--------------------------------------------------------------------------- */
+.theme-editorial {
+  --bg: #0b0b0c;
+  --fg: #f5f5f4;
+  --muted: #a1a1aa;
+  --accent: #e8c372;
+  --line: #26262a;
+}
+.theme-magazine {
+  --bg: #f7f4ec;
+  --fg: #1b1a17;
+  --muted: #6f6a60;
+  --accent: #9e3b2e;
+  --line: #ddd6c7;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

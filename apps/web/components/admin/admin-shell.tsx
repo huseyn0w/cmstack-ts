@@ -21,6 +21,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Palette,
   Tag,
   Users,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ interface AdminShellProps {
   children: ReactNode;
   user: User;
   canManageUsers: boolean;
+  canManageSettings: boolean;
 }
 
 interface NavItem {
@@ -51,7 +53,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-function buildNavGroups(canManageUsers: boolean): NavGroup[] {
+function buildNavGroups(canManageUsers: boolean, canManageSettings: boolean): NavGroup[] {
   const groups: NavGroup[] = [
     {
       heading: 'Dashboard',
@@ -113,6 +115,19 @@ function buildNavGroups(canManageUsers: boolean): NavGroup[] {
     });
   }
 
+  if (canManageSettings) {
+    groups.push({
+      heading: 'Site',
+      items: [
+        {
+          label: 'Appearance',
+          href: '/admin/appearance',
+          icon: <Palette className="h-4 w-4" />,
+        },
+      ],
+    });
+  }
+
   return groups;
 }
 
@@ -134,6 +149,7 @@ function getSectionLabel(pathname: string): string {
   if (pathname.startsWith('/admin/tags')) return 'Tags';
   if (pathname.startsWith('/admin/media')) return 'Media';
   if (pathname.startsWith('/admin/users')) return 'Users';
+  if (pathname.startsWith('/admin/appearance')) return 'Appearance';
   return 'Admin';
 }
 
@@ -175,13 +191,15 @@ function NavLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
 function Sidebar({
   user,
   canManageUsers,
+  canManageSettings,
   onClose,
 }: {
   user: User;
   canManageUsers: boolean;
+  canManageSettings: boolean;
   onClose?: () => void;
 }) {
-  const navGroups = buildNavGroups(canManageUsers);
+  const navGroups = buildNavGroups(canManageUsers, canManageSettings);
 
   return (
     <div className="flex flex-col h-full">
@@ -235,7 +253,7 @@ function Sidebar({
   );
 }
 
-export function AdminShell({ children, user, canManageUsers }: AdminShellProps) {
+export function AdminShell({ children, user, canManageUsers, canManageSettings }: AdminShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const sectionLabel = getSectionLabel(pathname);
@@ -245,7 +263,11 @@ export function AdminShell({ children, user, canManageUsers }: AdminShellProps) 
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-60 shrink-0 border-r border-border bg-card">
-        <Sidebar user={user} canManageUsers={canManageUsers} />
+        <Sidebar
+          user={user}
+          canManageUsers={canManageUsers}
+          canManageSettings={canManageSettings}
+        />
       </aside>
 
       {/* Mobile sidebar via Dialog */}
@@ -258,6 +280,7 @@ export function AdminShell({ children, user, canManageUsers }: AdminShellProps) 
             <Sidebar
               user={user}
               canManageUsers={canManageUsers}
+              canManageSettings={canManageSettings}
               onClose={() => setMobileOpen(false)}
             />
           </div>

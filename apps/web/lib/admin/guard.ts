@@ -24,6 +24,16 @@ export function canManageUsers(session: Session): boolean {
   );
 }
 
+/** Returns true if the session grants site-settings (appearance) capability. */
+export function canManageSettings(session: Session): boolean {
+  const permissions = session.user.role?.permissions ?? [];
+  return permissions.some(
+    (p) =>
+      (p.action === 'manage' && p.subject === 'all') ||
+      (p.action === 'manage' && p.subject === 'Setting'),
+  );
+}
+
 /**
  * Server-only guard for /admin routes.
  * Redirects to /signin if unauthenticated, to / if not admin-capable.

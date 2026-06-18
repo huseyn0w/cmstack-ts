@@ -9,5 +9,5 @@ test('the blog index renders', async ({ page }) => {
 
 test('the home page links to the blog', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Blog' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Blog', exact: true })).toBeVisible();
 });

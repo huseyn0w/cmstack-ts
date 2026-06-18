@@ -180,3 +180,13 @@ model Media {
   @@index([uploaderId])
   @@index([createdAt])
 }
+
+// --- Settings (Phase 5) ------------------------------------------------------
+
+/// Key/value site settings owned by the API (the source of truth). Phase 5 uses
+/// the `activeTheme` key to select which public theme the web app renders through.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

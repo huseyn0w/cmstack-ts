@@ -19,6 +19,7 @@ const PERMISSIONS = [
   { action: 'manage', subject: 'Category' },
   { action: 'manage', subject: 'Tag' },
   { action: 'manage', subject: 'Media' },
+  { action: 'manage', subject: 'Setting' },
 ] as const;
 
 // Roles and the permissions they grant. `Member` is the safe default for new
@@ -47,6 +48,11 @@ const ROLES: Record<
     permissions: [],
   },
 };
+
+// Default public theme. Must match a theme id registered in the web theme
+// catalogue (apps/web/themes); the web resolver falls back to its own default
+// for any unknown value, so this stays safe even if themes are renamed.
+const DEFAULT_ACTIVE_THEME = 'editorial';
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@typress.local';
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'admin12345';
@@ -179,6 +185,13 @@ async function main() {
   });
 
   await seedContent(admin.id);
+
+  // Default site settings. `update: {}` keeps an admin's chosen theme on re-seed.
+  await prisma.setting.upsert({
+    where: { key: 'activeTheme' },
+    create: { key: 'activeTheme', value: DEFAULT_ACTIVE_THEME },
+    update: {},
+  });
 
   console.log(`✓ Seeded ${PERMISSIONS.length} permissions, ${Object.keys(ROLES).length} roles.`);
   console.log(`✓ Admin user: ${ADMIN_EMAIL}. Password comes from SEED_ADMIN_PASSWORD`);

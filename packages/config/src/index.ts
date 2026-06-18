@@ -63,6 +63,13 @@ export {
   type PageDetail,
 } from './content';
 export {
+  ACTIVE_THEME_KEY,
+  updateThemeSettingSchema,
+  type UpdateThemeSettingInput,
+  themeSettingSchema,
+  type ThemeSetting,
+} from './settings';
+export {
   ALLOWED_MEDIA_MIME_TYPES,
   updateMediaSchema,
   type UpdateMediaInput,

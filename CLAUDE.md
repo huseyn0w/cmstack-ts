@@ -13,7 +13,7 @@ Reference implementations by the same author (study for feature parity, not code
 
 - Laravel: https://github.com/huseyn0w/Laravella-CMS
 
-**Status:** Phases 0–3 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
+**Status:** Phases 0–5 shipped. Phase 0: pnpm monorepo, Docker compose (web/api/db),
 Prisma + Postgres, Biome, Vitest, Playwright, CI. Phase 1 (Accounts): User/Role/Permission
 models, Argon2id passwords, JWT auth, CASL authorization (PoliciesGuard), Auth.js v5 on
 web (credentials + optional Google/GitHub) consuming the API. Phase 2 (Content): Post/
@@ -24,8 +24,10 @@ storage adapter, content-type validation, image dimensions, per-asset metadata, 
 gating, and static serving at `/uploads`. Phase 4 (Admin UI): editorial Next.js admin at
 `/admin` (Tailwind v4 + shadcn-style kit + Tiptap), screens for dashboard/posts/pages/
 categories/tags/media/users, server-action mutations, plus user-management API endpoints.
-Next: Phase 5 (Theme system). The full phased roadmap and feature mapping live in
-[README.md](README.md).
+Phase 5 (Theme system): runtime-resolved, swappable public themes selected by an
+`activeTheme` setting (API source of truth); the public site renders through the active
+theme; Administrator-only switching from `/admin/appearance`. Next: Phase 6 (Plugin
+system). The full phased roadmap and feature mapping live in [README.md](README.md).
 
 ## Auth & authorization (Phase 1)
 
@@ -96,8 +98,37 @@ Next: Phase 5 (Theme system). The full phased roadmap and feature mapping live i
   session. All mutations are **Server Actions** (`'use server'`) that call that client and
   `revalidatePath`; client components only invoke the actions. The API re-checks CASL on
   every call regardless of the UI.
-- The public site stays dark/editorial (legacy CSS vars `--bg/--fg/--accent/...`); the admin
-  uses the token system. Don't let one bleed into the other.
+- The public site renders through the **theme system** (Phase 5); each public theme owns its
+  own scoped CSS vars (`--bg/--fg/--accent/--line/--muted` under a `.theme-<id>` wrapper).
+  The admin uses the Tailwind token system (`--background/...`). Keep the two separate — a
+  theme must never touch the admin tokens and vice-versa.
+
+## Theme system (Phase 5)
+
+- The public site is rendered **through a runtime-resolved theme**, not hardcoded markup.
+  Which theme is active is the `activeTheme` key in the API `Setting` model (**the API is the
+  source of truth**); the web app owns the theme catalogue.
+- **API**: `settings` module. `GET /public/settings/theme` is **unauthenticated** (SSR needs
+  it before any session). `GET/PUT /settings/theme` are CASL-gated on a new subject
+  **`Setting`** (`read`/`manage`); only **Administrator** (`manage all`) holds it — Editors
+  don't switch themes. `PUT` body is validated by `updateThemeSettingSchema` (slug-shaped).
+  Shared contracts live in `@typress/config` (`updateThemeSettingSchema`, `themeSettingSchema`,
+  `ACTIVE_THEME_KEY`).
+- **Web**: themes live in `apps/web/themes/*` (they're React component sets — can't sit in
+  `packages/config`). A `Theme` contract = `{ meta, Layout, Home, BlogIndex, BlogPost }`;
+  `registry.ts` maps id→theme + exposes `themeCatalog`; `resolve.ts` has the pure
+  `resolveThemeId` (unknown/empty → default); `active-theme.ts` (`'server-only'`)
+  fetches the setting and **degrades to the default theme** on any API error/unknown id so
+  the public site always renders. The three public surfaces (`/`, `/blog`, `/blog/[slug]`)
+  render `<Layout><Surface/></Layout>` from the resolved theme. Ships `editorial` (dark,
+  default) and `magazine` (light) — switching re-skins the public site.
+- **Admin**: `/admin/appearance` (Administrator-only via `canManageSettings`) lists themes
+  and activates one through a Server Action that `revalidatePath('/', 'layout')` so the swap
+  is immediately visible. The stored theme id only ever flows into a fixed `theme-<id>` class
+  via the registry — never interpolated into markup.
+- Adding a theme: drop a folder in `apps/web/themes/<id>/`, export a `Theme`, register it in
+  `registry.ts`. The API/seed default (`'editorial'`) and `DEFAULT_THEME_ID` must stay in
+  sync, but the resolver makes drift safe (falls back to default).
 
 ## Stack (locked decisions — deviate only with a stated reason)
 

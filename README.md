@@ -3,9 +3,8 @@
 A WordPress-style CMS built entirely in TypeScript — lighter, faster, SEO-first, and
 easy to read, understand, and extend.
 
-> **Status:** Phase 0 (Foundation) is complete. The monorepo, Dockerized dev stack,
-> database, and the full test/lint/CI toolchain are in place. Feature phases follow the
-> roadmap below.
+> **Status:** Phases 0–5 are complete — foundation, accounts, content, media, the admin UI,
+> and a runtime theme system. Remaining feature phases follow the roadmap below.
 
 ## Stack
 
@@ -125,6 +124,22 @@ manage-users. Sign in at `/signin` as the seeded admin, then open `/admin`. The 
 never holds the API token — admin data fetching and all mutations run server-side (Server
 Actions) with the token kept on the server; the API re-checks permissions on every call.
 
+## Theme system (Phase 5)
+
+The public site renders **through a runtime-resolved theme** rather than hardcoded markup.
+The active theme is stored as the `activeTheme` **setting on the API** (the source of truth);
+the web app owns the catalogue of themes (they're React component sets). Two themes ship:
+**Editorial** (dark, the default) and **Magazine** (light, serif masthead). Switching the
+theme re-skins the whole public site (`/`, `/blog`, `/blog/<slug>`) immediately.
+
+- **Switch it:** sign in as an Administrator → **Admin → Appearance** (`/admin/appearance`),
+  pick a theme. Only Administrators can switch themes (it's gated by a `Setting` capability).
+- **API:** `GET /public/settings/theme` (public, read-only — the server-rendered site reads
+  it before any session); `GET`/`PUT /settings/theme` are CASL-gated (admin only). If the API
+  is unreachable or the stored value is unknown, the site falls back to the default theme.
+- **Add a theme:** drop a folder in `apps/web/themes/<id>/` exporting a `Theme`
+  (`Layout` + `Home`/`BlogIndex`/`BlogPost`), then register it in `themes/registry.ts`.
+
 ## Project layout
 
 ```
@@ -161,7 +176,7 @@ fresh-context review, observable behavior in the running app, and updated docs.
 | 2 ✅ | Content core | Posts, pages, categories, tags, revisions, soft-delete; server-side HTML sanitization; public `/blog` |
 | 3 ✅ | Media | Upload API, swappable storage adapter, content-type validation, image dimensions, per-asset metadata, CASL-gated |
 | 4 ✅ | Admin UI | Editorial Next.js admin (Tailwind v4 + shadcn-style kit + Tiptap): dashboard, posts/pages/categories/tags, media, users |
-| 5 | Theme system | Swappable, runtime-resolved template/component sets |
+| 5 ✅ | Theme system | Swappable, runtime-resolved themes selected by an `activeTheme` setting; public site renders through the active theme; Administrator-only switching at `/admin/appearance` |
 | 6 | Plugin system | Typed hook/event registry |
 | 7 | SEO/GEO + i18n | OG + JSON-LD, sitemap.ts, robots.ts, llms.txt, hreflang, next-intl; **admin-editable GEO content (CRUD) so AI assistants recommend your services** |
 | 8 | Comments, search, spam | Threaded comments, Postgres FTS, reCAPTCHA v3 + rate limiting |
