@@ -1,6 +1,6 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-24 · **Branch:** `refactor/repository-layer` (off `main`)
+**Updated:** 2026-06-24 (7/12 service domains refactored) · **Branch:** `refactor/repository-layer` (off `main`)
 **Phase:** Task 2 (architecture refactor) + Task 4 (tests) — *architecture-first per operator decision.*
 
 ---
@@ -41,35 +41,46 @@ effects) → repository (data access, framework-free, returns Prisma payloads)`.
   `apps/api/src/admin/admin.controller.ts` (injects PrismaClient, runs
   `Promise.all([user.count, role.count])`) — fix planned in plan §4.10b (AdminService +
   repo counts), scheduled with the Auth domain.
-- **Scaffolding + Settings domain (first repository slice) — committed (`4c35988`):**
-  - `packages/db/src/repositories/{index.ts, setting.repository.ts, setting.repository.spec.ts}`
-  - `packages/db/src/index.ts` re-exports Prisma surface + repositories.
-  - `apps/api/src/settings/settings.service.ts` injects `SETTING_REPOSITORY` (no Prisma).
-  - `apps/api/src/settings/settings.module.ts` wires the token (useFactory + PRISMA).
-  - `apps/api/src/settings/settings.service.spec.ts` (new, fake-repo tests).
-  - tsc + biome clean, full suite green.
+- **Scaffolding committed:** `packages/db/src/repositories/` (barrel, `crud.repository.ts`
+  base, per-aggregate files), `packages/db/src/index.ts` re-exports the Prisma surface
+  + repositories, and `apps/api/src/persistence/repository.providers.ts`
+  (`provideRepository(token, Impl)` DI helper).
+- **7 domains refactored, each its own commit (TDD, full suite green, tsc + biome clean):**
+  1. **Settings** → `SettingRepository`.
+  2. **SEO/GEO** → `SiteProfile` + `Service` + `Faq` repositories (asymmetric upsert).
+  3. **Tags** + **Categories** → repos + `PrismaCrudRepository` base; `findIdBySlug`
+     keeps the uniqueSlug excludeId loop; Category unchecked scalar `parentId`.
+  4. **Media** → `MediaRepository` (storage/DB ordering + rollback pinned by tests).
+  5. **Likes** → `PostLikeRepository` + incremental `PostRepository.findPublishedIdBySlug`
+     (race-resilient toggle preserved; repos never catch P2002/P2025).
+  6. **Comments** → `CommentRepository` (email never selected; status filter; post include);
+     reuses `PostRepository.findPublishedIdBySlug`.
+- **Adversarial review** of the simple-CRUD batch (Settings/SEO/Tags/Categories): two
+  independent skeptics — behaviour-preservation found **0** issues; correctness found only
+  minors (one type-honesty nit fixed). Tests now **212 passing** (was 134 baseline).
 
 ## PENDING (ordered — resume here)
-1. **SEO/GEO** → `SiteProfileRepository` + `ServiceRepository` + `FaqRepository`
-   (plan §4.13). Watch asymmetric upsert (profile create `{id:'default',...}` vs update)
-   and raw-null fallback to `DEFAULT_PROFILE` staying in the service (§10.10).
-2. **Tags** (§4.4) then **Categories** (§4.3) — introduce the `PrismaCrudRepository`
-   base here (plan §2.6). Categories: keep `CategoryUncheckedUpdateInput` + scalar
-   `parentId` + `'parentId' in input` semantics (§10.8).
-3. **Adversarial review** of the simple-CRUD batch (Settings/SEO/Tags/Categories).
-4. **Media** (§4.9, storage/DB ordering §10.2/§10.4) → **Likes** (§4.5, race-resilience
-   §10.5; uses `PostRepository.findPublishedIdBySlug`) → **Comments** (§4.8).
-5. **Revisions** (§4.6) + **Search** (§4.7, raw SQL one-unit, bound param, NULLS LAST,
-   bigint→Number §10.6).
-6. **Pages** (§4.2) → **Posts** (§4.1 — connect-vs-set §10.1, publish/revision order
-   §10.9, `post.published` observer event stays). Full adversarial pass.
-7. **Auth**: Users/Accounts/Roles (§4.10–4.12, 4 user shapes §10.7, oauth writes §10.8b)
-   + **Admin fat-controller fix** (§4.10b). Security-focused adversarial pass. Rewrite
-   the two specs that construct services with a PrismaClient and WILL break:
-   `auth/users.service.spec.ts`, `auth/accounts.service.spec.ts`.
-8. **Coverage gate**: enable V8 coverage in `vitest.config.ts`, hit ≥80% services+repos
+1. **Revisions** (§4.6) + **Search** (§4.7, raw SQL one-unit, bound `${q}` param, keep
+   `ORDER BY ts_rank DESC, "publishedAt" DESC NULLS LAST`, bigint→`Number(... ?? 0)` §10.6).
+2. **Pages** (§4.2) → **Posts** (§4.1 — create→`connect` vs update→`set` §10.1, publish/
+   revision order §10.9, `post.published` observer event stays). `PostRepository` already
+   exists with `findPublishedIdBySlug` — GROW it (don't recreate). Full adversarial pass.
+3. **Auth**: Users/Accounts/Roles (§4.10–4.12, 4 user shapes §10.7, oauth writes §10.8b)
+   + **Admin fat-controller fix** (§4.10b — `admin.controller.ts` is the one real fat
+   controller). Security-focused adversarial pass. Rewrite the two specs that construct
+   services with a PrismaClient and WILL break: `auth/users.service.spec.ts`,
+   `auth/accounts.service.spec.ts`.
+4. **Coverage gate**: enable V8 coverage in `vitest.config.ts`, hit ≥80% services+repos
    / 100% critical paths; **completeness-critic** pass.
-9. Then **Task 1 (feature parity)** + **Task 3 (UI)** — plan §7/§8.
+5. Then **Task 1 (feature parity)** + **Task 3 (UI)** — plan §7/§8.
+
+**Conventions established (reuse for remaining domains):**
+- Repo file exports `interface`, `X_REPOSITORY` Symbol, `PrismaXRepository`; trivial repos
+  extend `PrismaCrudRepository` (super(prisma.<model>)) for `exists`/`hardDelete`.
+- Module wiring: `provideRepository(TOKEN, PrismaImpl)` in the feature module's providers.
+- Service tests use fakes typed `Record<keyof XRepository, Mock>` cast `as unknown as X`.
+- Tests/services import model + repo types from `@cmstack-ts/db` (NOT `@prisma/client`).
+- `$transaction` stays the array-batch form; repos never catch P2002/P2025.
 
 ## Decisions / rejected options
 - **Operator chose a FULL repository layer** for all domains (over my
