@@ -1,6 +1,10 @@
 import {
   CATEGORY_REPOSITORY,
+  POST_LIKE_REPOSITORY,
+  POST_REPOSITORY,
   PrismaCategoryRepository,
+  PrismaPostLikeRepository,
+  PrismaPostRepository,
   PrismaTagRepository,
   TAG_REPOSITORY,
 } from '@cmstack-ts/db';
@@ -52,6 +56,8 @@ import { TagsService } from './tags.service';
     LikesService,
     provideRepository(TAG_REPOSITORY, PrismaTagRepository),
     provideRepository(CATEGORY_REPOSITORY, PrismaCategoryRepository),
+    provideRepository(POST_REPOSITORY, PrismaPostRepository),
+    provideRepository(POST_LIKE_REPOSITORY, PrismaPostLikeRepository),
   ],
 })
 export class ContentModule {}

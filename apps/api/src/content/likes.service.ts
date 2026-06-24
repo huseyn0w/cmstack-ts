@@ -1,32 +1,36 @@
 import type { LikeState } from '@cmstack-ts/config';
-import { Prisma, type PrismaClient } from '@cmstack-ts/db';
+import {
+  POST_LIKE_REPOSITORY,
+  POST_REPOSITORY,
+  type PostLikeRepository,
+  type PostRepository,
+  Prisma,
+} from '@cmstack-ts/db';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PRISMA } from '../prisma/prisma.module';
 
 @Injectable()
 export class LikesService {
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  constructor(
+    @Inject(POST_REPOSITORY) private readonly posts: PostRepository,
+    @Inject(POST_LIKE_REPOSITORY) private readonly likes: PostLikeRepository,
+  ) {}
 
   private async requirePostId(slug: string): Promise<string> {
-    const post = await this.prisma.post.findFirst({
-      where: { slug, status: 'PUBLISHED', deletedAt: null },
-      select: { id: true },
-    });
-    if (!post) throw new NotFoundException('Post not found.');
-    return post.id;
+    const postId = await this.posts.findPublishedIdBySlug(slug);
+    if (!postId) throw new NotFoundException('Post not found.');
+    return postId;
   }
 
   /** Toggle the signed-in user's like on a post; returns the new state. */
   async toggle(slug: string, userId: string): Promise<LikeState> {
     const postId = await this.requirePostId(slug);
-    const where = { postId_userId: { postId, userId } };
-    const existing = await this.prisma.postLike.findUnique({ where, select: { id: true } });
+    const existing = await this.likes.findLike(postId, userId);
 
     try {
       if (existing) {
-        await this.prisma.postLike.delete({ where });
+        await this.likes.deleteLike(postId, userId);
       } else {
-        await this.prisma.postLike.create({ data: { postId, userId } });
+        await this.likes.createLike(postId, userId);
       }
     } catch (error) {
       // Concurrent toggle already created/removed the like (P2002 unique race,
@@ -46,11 +50,8 @@ export class LikesService {
   async state(slug: string, userId: string): Promise<LikeState> {
     const postId = await this.requirePostId(slug);
     const [likes, mine] = await Promise.all([
-      this.prisma.postLike.count({ where: { postId } }),
-      this.prisma.postLike.findUnique({
-        where: { postId_userId: { postId, userId } },
-        select: { id: true },
-      }),
+      this.likes.countLikes(postId),
+      this.likes.findLike(postId, userId),
     ]);
     return { likes, liked: mine !== null };
   }
@@ -58,7 +59,7 @@ export class LikesService {
   /** Public like count (for visitors who aren't signed in). */
   async publicCount(slug: string): Promise<LikeState> {
     const postId = await this.requirePostId(slug);
-    const likes = await this.prisma.postLike.count({ where: { postId } });
+    const likes = await this.likes.countLikes(postId);
     return { likes, liked: false };
   }
 }
