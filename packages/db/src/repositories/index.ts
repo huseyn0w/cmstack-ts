@@ -12,3 +12,4 @@ export * from './category.repository';
 export * from './media.repository';
 export * from './post.repository';
 export * from './post-like.repository';
+export * from './comment.repository';

@@ -1,4 +1,12 @@
 import {
+  type AdminComment,
+  type AdminCommentList,
+  type AdminCommentListQuery,
+  type ModerateCommentInput,
+  adminCommentListQuerySchema,
+  moderateCommentSchema,
+} from '@cmstack-ts/config';
+import {
   Body,
   Controller,
   Delete,
@@ -9,14 +17,6 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {
-  type AdminComment,
-  type AdminCommentList,
-  type AdminCommentListQuery,
-  type ModerateCommentInput,
-  adminCommentListQuerySchema,
-  moderateCommentSchema,
-} from '@cmstack-ts/config';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CheckPolicies } from '../authz/check-policies.decorator';
 import { PoliciesGuard } from '../authz/policies.guard';

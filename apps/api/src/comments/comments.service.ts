@@ -1,4 +1,3 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   AdminComment,
   AdminCommentList,
@@ -7,15 +6,22 @@ import type {
   CreateCommentInput,
   ModerateCommentInput,
 } from '@cmstack-ts/config';
-import { Prisma, type PrismaClient } from '@cmstack-ts/db';
-import { PRISMA } from '../prisma/prisma.module';
+import {
+  type AdminCommentRow,
+  COMMENT_REPOSITORY,
+  type CommentRepository,
+  POST_REPOSITORY,
+  type PostRepository,
+} from '@cmstack-ts/db';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { RecaptchaService } from '../spam/recaptcha.service';
 import { buildCommentThread } from './thread';
 
 @Injectable()
 export class CommentsService {
   constructor(
-    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    @Inject(POST_REPOSITORY) private readonly posts: PostRepository,
+    @Inject(COMMENT_REPOSITORY) private readonly comments: CommentRepository,
     private readonly recaptcha: RecaptchaService,
   ) {}
 
@@ -26,30 +32,22 @@ export class CommentsService {
       throw new BadRequestException('Spam check failed. Please try again.');
     }
 
-    const post = await this.prisma.post.findFirst({
-      where: { slug, status: 'PUBLISHED', deletedAt: null },
-      select: { id: true },
-    });
-    if (!post) throw new NotFoundException('Post not found.');
+    const postId = await this.posts.findPublishedIdBySlug(slug);
+    if (!postId) throw new NotFoundException('Post not found.');
 
     if (input.parentId) {
       // Only allow replies to an already-approved comment on the same post.
-      const parent = await this.prisma.comment.findFirst({
-        where: { id: input.parentId, postId: post.id, status: 'APPROVED' },
-        select: { id: true },
-      });
+      const parent = await this.comments.findApprovedById(input.parentId, postId);
       if (!parent) throw new BadRequestException('Invalid parent comment.');
     }
 
-    await this.prisma.comment.create({
-      data: {
-        postId: post.id,
-        parentId: input.parentId ?? null,
-        authorName: input.authorName,
-        authorEmail: input.authorEmail,
-        content: input.content,
-        status: 'PENDING',
-      },
+    await this.comments.create({
+      postId,
+      parentId: input.parentId ?? null,
+      authorName: input.authorName,
+      authorEmail: input.authorEmail,
+      content: input.content,
+      status: 'PENDING',
     });
 
     return { status: 'PENDING' };
@@ -57,17 +55,10 @@ export class CommentsService {
 
   /** Public threaded read: only APPROVED comments for a published post. */
   async listForPost(slug: string): Promise<CommentThread> {
-    const post = await this.prisma.post.findFirst({
-      where: { slug, status: 'PUBLISHED', deletedAt: null },
-      select: { id: true },
-    });
-    if (!post) throw new NotFoundException('Post not found.');
+    const postId = await this.posts.findPublishedIdBySlug(slug);
+    if (!postId) throw new NotFoundException('Post not found.');
 
-    const rows = await this.prisma.comment.findMany({
-      where: { postId: post.id, status: 'APPROVED' },
-      orderBy: { createdAt: 'asc' },
-      select: { id: true, parentId: true, authorName: true, content: true, createdAt: true },
-    });
+    const rows = await this.comments.listApprovedForPost(postId);
 
     const items = buildCommentThread(
       rows.map((r) => ({
@@ -84,22 +75,14 @@ export class CommentsService {
   // --- Admin moderation ------------------------------------------------------
 
   async list(query: AdminCommentListQuery): Promise<AdminCommentList> {
-    const where: Prisma.CommentWhereInput = {};
-    if (query.status) where.status = query.status;
-
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.comment.findMany({
-        where,
-        include: { post: { select: { slug: true, title: true } } },
-        orderBy: { createdAt: 'desc' },
-        skip: (query.page - 1) * query.perPage,
-        take: query.perPage,
-      }),
-      this.prisma.comment.count({ where }),
-    ]);
+    const { items, total } = await this.comments.listAndCount({
+      status: query.status,
+      page: query.page,
+      perPage: query.perPage,
+    });
 
     return {
-      items: rows.map((r) => this.toAdmin(r)),
+      items: items.map((r) => this.toAdmin(r)),
       total,
       page: query.page,
       perPage: query.perPage,
@@ -108,34 +91,20 @@ export class CommentsService {
 
   async moderate(id: string, input: ModerateCommentInput): Promise<AdminComment> {
     await this.ensureExists(id);
-    const row = await this.prisma.comment.update({
-      where: { id },
-      data: { status: input.status },
-      include: { post: { select: { slug: true, title: true } } },
-    });
+    const row = await this.comments.updateStatus(id, input.status);
     return this.toAdmin(row);
   }
 
   async remove(id: string): Promise<void> {
     await this.ensureExists(id);
-    await this.prisma.comment.delete({ where: { id } });
+    await this.comments.hardDelete(id);
   }
 
   private async ensureExists(id: string): Promise<void> {
-    const row = await this.prisma.comment.findUnique({ where: { id }, select: { id: true } });
-    if (!row) throw new NotFoundException('Comment not found.');
+    if (!(await this.comments.exists(id))) throw new NotFoundException('Comment not found.');
   }
 
-  private toAdmin(row: {
-    id: string;
-    parentId: string | null;
-    authorName: string;
-    authorEmail: string;
-    content: string;
-    status: AdminComment['status'];
-    createdAt: Date;
-    post: { slug: string; title: string };
-  }): AdminComment {
+  private toAdmin(row: AdminCommentRow): AdminComment {
     return {
       id: row.id,
       postSlug: row.post.slug,

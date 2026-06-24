@@ -1,6 +1,10 @@
+import {
+  type CommentThread,
+  type CreateCommentInput,
+  createCommentSchema,
+} from '@cmstack-ts/config';
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
-import { type CommentThread, type CreateCommentInput, createCommentSchema } from '@cmstack-ts/config';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CommentsService } from './comments.service';
 
