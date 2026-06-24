@@ -15,26 +15,26 @@ datasource db {
 // --- Accounts (Phase 1) ------------------------------------------------------
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String?
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String?
   /// Argon2id hash. Null for users who only sign in via an OAuth provider.
-  passwordHash String?
-  image        String?
+  passwordHash  String?
+  image         String?
   /// Public author bio, shown on the author profile page.
-  bio          String?
+  bio           String?
   emailVerified DateTime?
-  roleId       String?
-  role         Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  accounts     Account[]
-  posts        Post[]
-  pages        Page[]
-  revisions    Revision[]
-  media        Media[]
-  comments     Comment[]
-  likes        PostLike[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  roleId        String?
+  role          Role?      @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  accounts      Account[]
+  posts         Post[]
+  pages         Page[]
+  revisions     Revision[]
+  media         Media[]
+  comments      Comment[]
+  likes         PostLike[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   @@index([roleId])
 }
@@ -80,28 +80,53 @@ enum ContentStatus {
 }
 
 model Post {
-  id          String        @id @default(cuid())
-  title       String
-  slug        String        @unique
-  excerpt     String?
+  id              String            @id @default(cuid())
+  title           String
+  slug            String            @unique
+  excerpt         String?
   /// Sanitized HTML produced by the editor.
-  content     String
-  status      ContentStatus @default(DRAFT)
-  publishedAt DateTime?
-  authorId    String?
-  author      User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  categories  Category[]    @relation("PostCategories")
-  tags        Tag[]         @relation("PostTags")
-  revisions   Revision[]
-  comments    Comment[]
-  likes       PostLike[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  content         String
+  status          ContentStatus     @default(DRAFT)
+  publishedAt     DateTime?
+  /// Default-locale (en) SEO meta; per-locale overrides live in PostTranslation.
+  metaTitle       String?
+  metaDescription String?
+  authorId        String?
+  author          User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  categories      Category[]        @relation("PostCategories")
+  tags            Tag[]             @relation("PostTags")
+  revisions       Revision[]
+  comments        Comment[]
+  likes           PostLike[]
+  translations    PostTranslation[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   /// Soft delete: non-null means trashed.
-  deletedAt   DateTime?
+  deletedAt       DateTime?
 
   @@index([status, publishedAt])
   @@index([authorId])
+}
+
+/// Per-locale translation of a Post. The base Post row holds the default locale
+/// (en); only non-default locales (de/ru) get a row here. Every translatable
+/// field is nullable so a missing field falls back to the base at read time.
+model PostTranslation {
+  id              String   @id @default(cuid())
+  postId          String
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  locale          String
+  title           String?
+  excerpt         String?
+  /// Sanitized HTML when present.
+  content         String?
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([postId, locale])
+  @@index([locale])
 }
 
 /// A like on a post by a signed-in user (one per user per post).
@@ -118,19 +143,41 @@ model PostLike {
 }
 
 model Page {
-  id        String        @id @default(cuid())
-  title     String
-  slug      String        @unique
-  content   String
-  status    ContentStatus @default(DRAFT)
-  authorId  String?
-  author    User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  revisions Revision[]
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  deletedAt DateTime?
+  id              String            @id @default(cuid())
+  title           String
+  slug            String            @unique
+  content         String
+  status          ContentStatus     @default(DRAFT)
+  /// Default-locale (en) SEO meta; per-locale overrides live in PageTranslation.
+  metaTitle       String?
+  metaDescription String?
+  authorId        String?
+  author          User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  revisions       Revision[]
+  translations    PageTranslation[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
 
   @@index([status])
+}
+
+/// Per-locale translation of a Page (see PostTranslation). Pages have no excerpt.
+model PageTranslation {
+  id              String   @id @default(cuid())
+  pageId          String
+  page            Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  locale          String
+  title           String?
+  /// Sanitized HTML when present.
+  content         String?
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([pageId, locale])
+  @@index([locale])
 }
 
 model Category {
