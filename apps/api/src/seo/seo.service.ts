@@ -15,6 +15,7 @@ import {
   SERVICE_REPOSITORY,
   SITE_PROFILE_REPOSITORY,
   type ServiceRepository,
+  type SiteProfile as DbSiteProfile,
   type SiteProfileRepository,
 } from '@cmstack-ts/db';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -129,7 +130,7 @@ export class SeoService {
     if (!(await this.faqs.exists(id))) throw new NotFoundException('FAQ item not found.');
   }
 
-  private toProfile(row: SiteProfile): SiteProfile {
+  private toProfile(row: DbSiteProfile): SiteProfile {
     return {
       organizationName: row.organizationName,
       tagline: row.tagline,
