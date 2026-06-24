@@ -26,7 +26,7 @@ describe('AuthorsService', () => {
       bio: 'hi',
     });
     posts.publicByAuthor.mockResolvedValue([{ id: 'p1' }]);
-    const result = await service.getProfile('u1');
+    const result = await service.getProfile('u1', 'de');
     expect(result).toEqual({
       id: 'u1',
       name: 'Ada',
@@ -34,7 +34,13 @@ describe('AuthorsService', () => {
       bio: 'hi',
       posts: [{ id: 'p1' }],
     });
-    expect(posts.publicByAuthor).toHaveBeenCalledWith('u1');
+    expect(posts.publicByAuthor).toHaveBeenCalledWith('u1', 'de');
+  });
+
+  it('defaults the author posts to the default locale', async () => {
+    users.findPublicProfile.mockResolvedValue({ id: 'u1', name: 'Ada', image: null, bio: null });
+    await service.getProfile('u1');
+    expect(posts.publicByAuthor).toHaveBeenCalledWith('u1', 'en');
   });
 
   it('throws NotFound for an unknown author (and never lists posts)', async () => {
