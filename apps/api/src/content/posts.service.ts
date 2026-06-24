@@ -6,7 +6,15 @@ import type {
   PostSummary,
   UpdatePostInput,
 } from '@cmstack-ts/config';
-import { Prisma, type PrismaClient } from '@cmstack-ts/db';
+import {
+  POST_REPOSITORY,
+  type PostRepository,
+  type PostUpdateData,
+  type PostWithRelations,
+  Prisma,
+  REVISION_REPOSITORY,
+  type RevisionRepository,
+} from '@cmstack-ts/db';
 import {
   BadRequestException,
   ConflictException,
@@ -15,17 +23,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { HookRegistry } from '../plugins/hook-registry';
-import { PRISMA } from '../prisma/prisma.module';
 import { HtmlSanitizerService } from './html-sanitizer.service';
 import { slugify } from './slug';
-
-const postInclude = {
-  author: true,
-  categories: true,
-  tags: true,
-} satisfies Prisma.PostInclude;
-
-type PostWithRelations = Prisma.PostGetPayload<{ include: typeof postInclude }>;
 
 export interface RevisionView {
   id: string;
@@ -37,7 +36,8 @@ export interface RevisionView {
 @Injectable()
 export class PostsService {
   constructor(
-    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    @Inject(POST_REPOSITORY) private readonly posts: PostRepository,
+    @Inject(REVISION_REPOSITORY) private readonly revisionRepo: RevisionRepository,
     private readonly sanitizer: HtmlSanitizerService,
     private readonly hooks: HookRegistry,
   ) {}
@@ -46,21 +46,16 @@ export class PostsService {
     const slug = await this.uniqueSlug(input.slug ?? slugify(input.title));
     const status = input.status ?? 'DRAFT';
     try {
-      const post = await this.prisma.post.create({
-        data: {
-          title: input.title,
-          slug,
-          excerpt: input.excerpt ?? null,
-          content: this.sanitizer.sanitize(input.content ?? ''),
-          status,
-          publishedAt: status === 'PUBLISHED' ? new Date() : null,
-          authorId,
-          categories: input.categoryIds
-            ? { connect: input.categoryIds.map((id) => ({ id })) }
-            : undefined,
-          tags: input.tagIds ? { connect: input.tagIds.map((id) => ({ id })) } : undefined,
-        },
-        include: postInclude,
+      const post = await this.posts.create({
+        title: input.title,
+        slug,
+        excerpt: input.excerpt ?? null,
+        content: this.sanitizer.sanitize(input.content ?? ''),
+        status,
+        publishedAt: status === 'PUBLISHED' ? new Date() : null,
+        authorId,
+        categoryIds: input.categoryIds,
+        tagIds: input.tagIds,
       });
       if (status === 'PUBLISHED') {
         await this.hooks.emit('post.published', {
@@ -76,20 +71,17 @@ export class PostsService {
   }
 
   async update(id: string, input: UpdatePostInput, authorId: string): Promise<PostDetail> {
-    const existing = await this.prisma.post.findFirst({
-      where: { id, deletedAt: null },
-      include: postInclude,
-    });
+    const existing = await this.posts.findActiveById(id);
     if (!existing) {
       throw new NotFoundException('Post not found.');
     }
 
     // Snapshot the current version before mutating, for revision history.
-    await this.prisma.revision.create({
-      data: { postId: id, authorId, snapshot: this.snapshot(existing) },
-    });
+    // NOTE: deliberately a separate write (not transactional with the update) —
+    // matching prior behaviour where a failed update still leaves the snapshot.
+    await this.revisionRepo.create({ postId: id, authorId, snapshot: this.snapshot(existing) });
 
-    const data: Prisma.PostUpdateInput = {};
+    const data: PostUpdateData = {};
     if (input.title !== undefined) data.title = input.title;
     if (input.slug !== undefined) data.slug = await this.uniqueSlug(input.slug, id);
     if (input.excerpt !== undefined) data.excerpt = input.excerpt ?? null;
@@ -102,17 +94,13 @@ export class PostsService {
         data.publishedAt = new Date();
       }
     }
-    if (input.categoryIds !== undefined) {
-      data.categories = { set: input.categoryIds.map((cid) => ({ id: cid })) };
-    }
-    if (input.tagIds !== undefined) {
-      data.tags = { set: input.tagIds.map((tid) => ({ id: tid })) };
-    }
+    if (input.categoryIds !== undefined) data.categoryIds = input.categoryIds;
+    if (input.tagIds !== undefined) data.tagIds = input.tagIds;
 
     const becamePublished = input.status === 'PUBLISHED' && existing.status !== 'PUBLISHED';
 
     try {
-      const post = await this.prisma.post.update({ where: { id }, data, include: postInclude });
+      const post = await this.posts.update(id, data);
       if (becamePublished) {
         await this.hooks.emit('post.published', {
           id: post.id,
@@ -127,28 +115,16 @@ export class PostsService {
   }
 
   async list(query: PostListQuery, opts: { publicOnly: boolean }): Promise<PostList> {
-    const where: Prisma.PostWhereInput = {};
-    if (opts.publicOnly) {
-      where.status = 'PUBLISHED';
-      where.deletedAt = null;
-    } else {
-      if (!query.includeTrashed) where.deletedAt = null;
-      if (query.status) where.status = query.status;
-    }
-    if (query.categorySlug) where.categories = { some: { slug: query.categorySlug } };
-    if (query.tagSlug) where.tags = { some: { slug: query.tagSlug } };
-    if (query.q) where.title = { contains: query.q, mode: 'insensitive' };
-
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.post.findMany({
-        where,
-        include: postInclude,
-        orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-        skip: (query.page - 1) * query.perPage,
-        take: query.perPage,
-      }),
-      this.prisma.post.count({ where }),
-    ]);
+    const { items, total } = await this.posts.listAndCount({
+      publicOnly: opts.publicOnly,
+      includeTrashed: query.includeTrashed,
+      status: query.status,
+      categorySlug: query.categorySlug,
+      tagSlug: query.tagSlug,
+      q: query.q,
+      page: query.page,
+      perPage: query.perPage,
+    });
 
     return {
       items: items.map((p) => this.toSummary(p)),
@@ -159,26 +135,19 @@ export class PostsService {
   }
 
   async findById(id: string): Promise<PostDetail> {
-    const post = await this.prisma.post.findUnique({ where: { id }, include: postInclude });
+    const post = await this.posts.findById(id);
     if (!post) throw new NotFoundException('Post not found.');
     return this.toDetail(post);
   }
 
   /** Published posts by a given author (newest first), as summaries. */
   async publicByAuthor(authorId: string): Promise<PostSummary[]> {
-    const posts = await this.prisma.post.findMany({
-      where: { authorId, status: 'PUBLISHED', deletedAt: null },
-      include: postInclude,
-      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-    });
+    const posts = await this.posts.publicByAuthor(authorId);
     return posts.map((p) => this.toSummary(p));
   }
 
   async findPublicBySlug(slug: string): Promise<PostDetail> {
-    const post = await this.prisma.post.findFirst({
-      where: { slug, status: 'PUBLISHED', deletedAt: null },
-      include: postInclude,
-    });
+    const post = await this.posts.findPublicBySlug(slug);
     if (!post) throw new NotFoundException('Post not found.');
     // Let plugins transform the public post just before it is returned.
     return this.hooks.applyFilters('public.post.render', this.toDetail(post));
@@ -186,30 +155,23 @@ export class PostsService {
 
   async softDelete(id: string): Promise<void> {
     await this.ensureExists(id);
-    await this.prisma.post.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.posts.setDeletedAt(id, new Date());
   }
 
   async restore(id: string): Promise<PostDetail> {
     await this.ensureExists(id);
-    const post = await this.prisma.post.update({
-      where: { id },
-      data: { deletedAt: null },
-      include: postInclude,
-    });
+    const post = await this.posts.restore(id);
     return this.toDetail(post);
   }
 
   async destroy(id: string): Promise<void> {
     await this.ensureExists(id);
-    await this.prisma.post.delete({ where: { id } });
+    await this.posts.hardDelete(id);
   }
 
   async revisions(postId: string): Promise<RevisionView[]> {
     await this.ensureExists(postId);
-    const revisions = await this.prisma.revision.findMany({
-      where: { postId },
-      orderBy: { createdAt: 'desc' },
-    });
+    const revisions = await this.revisionRepo.listForPost(postId);
     return revisions.map((r) => ({
       id: r.id,
       authorId: r.authorId,
@@ -219,18 +181,14 @@ export class PostsService {
   }
 
   private async ensureExists(id: string): Promise<void> {
-    const post = await this.prisma.post.findUnique({ where: { id }, select: { id: true } });
-    if (!post) throw new NotFoundException('Post not found.');
+    if (!(await this.posts.exists(id))) throw new NotFoundException('Post not found.');
   }
 
   private async uniqueSlug(desired: string, excludeId?: string): Promise<string> {
     let candidate = desired;
     let suffix = 1;
     while (true) {
-      const existing = await this.prisma.post.findUnique({
-        where: { slug: candidate },
-        select: { id: true },
-      });
+      const existing = await this.posts.findIdBySlug(candidate);
       if (!existing || existing.id === excludeId) return candidate;
       suffix += 1;
       candidate = `${desired}-${suffix}`;

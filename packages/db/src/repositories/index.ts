@@ -11,6 +11,8 @@ export * from './tag.repository';
 export * from './category.repository';
 export * from './media.repository';
 export * from './post.repository';
+export * from './page.repository';
+export * from './revision.repository';
 export * from './post-like.repository';
 export * from './comment.repository';
 export * from './search.repository';

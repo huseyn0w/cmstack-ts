@@ -4,7 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LikesService } from './likes.service';
 
-let posts: Record<keyof PostRepository, Mock>;
+let posts: { findPublishedIdBySlug: Mock };
 let likes: Record<keyof PostLikeRepository, Mock>;
 let service: LikesService;
 

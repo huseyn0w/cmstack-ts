@@ -4,7 +4,7 @@ import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RecaptchaService } from '../spam/recaptcha.service';
 import { CommentsService } from './comments.service';
 
-let posts: Record<keyof PostRepository, Mock>;
+let posts: { findPublishedIdBySlug: Mock };
 let comments: Record<keyof CommentRepository, Mock>;
 let recaptcha: { verify: Mock };
 let service: CommentsService;
