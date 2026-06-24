@@ -13,9 +13,10 @@ function postRepo() {
     update: vi.fn(),
     count: vi.fn(),
   };
+  const postTranslation = { upsert: vi.fn(), delete: vi.fn() };
   const $transaction = vi.fn(async (ops: unknown[]) => Promise.all(ops as Promise<unknown>[]));
-  const prisma = { post, $transaction } as unknown as PrismaClient;
-  return { repo: new PrismaPostRepository(prisma), post, $transaction };
+  const prisma = { post, postTranslation, $transaction } as unknown as PrismaClient;
+  return { repo: new PrismaPostRepository(prisma), post, postTranslation, $transaction };
 }
 
 describe('PrismaPostRepository.create', () => {
@@ -116,6 +117,84 @@ describe('PrismaPostRepository.listAndCount', () => {
     post.count.mockResolvedValue(0);
     await repo.listAndCount({ publicOnly: false, includeTrashed: true, page: 1, perPage: 10 });
     expect(post.count.mock.calls[0]?.[0]?.where).toEqual({});
+  });
+});
+
+describe('PrismaPostRepository localization', () => {
+  it('findPublicBySlug without a locale includes no translations (en path unchanged)', async () => {
+    const { repo, post } = postRepo();
+    post.findFirst.mockResolvedValue(null);
+    await repo.findPublicBySlug('s');
+    const include = post.findFirst.mock.calls[0]?.[0]?.include;
+    expect(include).toEqual({ author: true, categories: true, tags: true });
+  });
+
+  it("findPublicBySlug with a locale includes that locale's translations only", async () => {
+    const { repo, post } = postRepo();
+    post.findFirst.mockResolvedValue(null);
+    await repo.findPublicBySlug('s', 'de');
+    const include = post.findFirst.mock.calls[0]?.[0]?.include;
+    expect(include.translations).toEqual({ where: { locale: 'de' } });
+  });
+
+  it("listAndCount with a locale joins that locale's translations", async () => {
+    const { repo, post } = postRepo();
+    post.findMany.mockResolvedValue([]);
+    post.count.mockResolvedValue(0);
+    await repo.listAndCount({ publicOnly: true, page: 1, perPage: 10 }, 'ru');
+    expect(post.findMany.mock.calls[0]?.[0]?.include.translations).toEqual({
+      where: { locale: 'ru' },
+    });
+  });
+
+  it("publicByAuthor with a locale joins that locale's translations", async () => {
+    const { repo, post } = postRepo();
+    post.findMany.mockResolvedValue([]);
+    await repo.publicByAuthor('u1', 'de');
+    expect(post.findMany.mock.calls[0]?.[0]?.include.translations).toEqual({
+      where: { locale: 'de' },
+    });
+  });
+
+  it('findByIdWithTranslations includes ALL translations (admin edit)', async () => {
+    const { repo, post } = postRepo();
+    post.findUnique.mockResolvedValue(null);
+    await repo.findByIdWithTranslations('p1');
+    const include = post.findUnique.mock.calls[0]?.[0]?.include;
+    expect(include.translations).toBe(true);
+  });
+
+  it('upsertTranslation writes the full locale row on the composite key', async () => {
+    const { repo, postTranslation } = postRepo();
+    postTranslation.upsert.mockResolvedValue({});
+    await repo.upsertTranslation('p1', 'de', { title: 'T', content: 'c' });
+    const arg = postTranslation.upsert.mock.calls[0]?.[0];
+    expect(arg.where).toEqual({ postId_locale: { postId: 'p1', locale: 'de' } });
+    expect(arg.create).toEqual({
+      postId: 'p1',
+      locale: 'de',
+      title: 'T',
+      excerpt: null,
+      content: 'c',
+      metaTitle: null,
+      metaDescription: null,
+    });
+    expect(arg.update).toEqual({
+      title: 'T',
+      excerpt: null,
+      content: 'c',
+      metaTitle: null,
+      metaDescription: null,
+    });
+  });
+
+  it('deleteTranslation removes by the composite key', async () => {
+    const { repo, postTranslation } = postRepo();
+    postTranslation.delete.mockResolvedValue({});
+    await repo.deleteTranslation('p1', 'ru');
+    expect(postTranslation.delete.mock.calls[0]?.[0]?.where).toEqual({
+      postId_locale: { postId: 'p1', locale: 'ru' },
+    });
   });
 });
 

@@ -9,6 +9,34 @@ export const postInclude = {
 
 export type PostWithRelations = Prisma.PostGetPayload<{ include: typeof postInclude }>;
 
+/**
+ * Include for a localized read: the base relations plus, when `locale` is given,
+ * just that locale's translation row. With no locale the include is exactly
+ * {@link postInclude} (the default-locale read is byte-identical to before).
+ */
+export function localizedPostInclude(locale?: string): Prisma.PostInclude {
+  return locale ? { ...postInclude, translations: { where: { locale } } } : postInclude;
+}
+
+export type PostTranslationRow = Prisma.PostTranslationGetPayload<Record<string, never>>;
+
+/**
+ * A post with its relations and, when a localized read requested them, the
+ * translation rows. `translations` is the locale-filtered set (0-or-1 row) for a
+ * public read, or every row for the admin edit view; it is absent for the
+ * default-locale (base-only) read so that path stays byte-identical.
+ */
+export type LocalizedPost = PostWithRelations & { translations?: PostTranslationRow[] };
+
+/** The per-locale fields a translation write defines (see {@link PostRepository.upsertTranslation}). */
+export type PostTranslationData = {
+  title?: string;
+  excerpt?: string;
+  content?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+};
+
 export type PostCreateData = {
   title: string;
   slug: string;
@@ -54,13 +82,23 @@ export interface PostRepository {
   findById(id: string): Promise<PostWithRelations | null>;
   /** Non-trashed post by id (deletedAt: null) — the editable view. */
   findActiveById(id: string): Promise<PostWithRelations | null>;
-  findPublicBySlug(slug: string): Promise<PostWithRelations | null>;
-  publicByAuthor(authorId: string): Promise<PostWithRelations[]>;
-  listAndCount(filter: PostListFilter): Promise<{ items: PostWithRelations[]; total: number }>;
+  /** A post with every translation row — the admin edit view. */
+  findByIdWithTranslations(id: string): Promise<LocalizedPost | null>;
+  /** Published, non-trashed post by slug; overlays `locale`'s translation when given. */
+  findPublicBySlug(slug: string, locale?: string): Promise<LocalizedPost | null>;
+  publicByAuthor(authorId: string, locale?: string): Promise<LocalizedPost[]>;
+  listAndCount(
+    filter: PostListFilter,
+    locale?: string,
+  ): Promise<{ items: LocalizedPost[]; total: number }>;
   update(id: string, data: PostUpdateData): Promise<PostWithRelations>;
   setDeletedAt(id: string, when: Date | null): Promise<void>;
   restore(id: string): Promise<PostWithRelations>;
   findIdBySlug(slug: string): Promise<{ id: string } | null>;
+  /** Create or replace the post's translation for `locale` (full-row replace). */
+  upsertTranslation(postId: string, locale: string, data: PostTranslationData): Promise<void>;
+  /** Remove the post's translation for `locale` (no-op semantics handled by the service). */
+  deleteTranslation(postId: string, locale: string): Promise<void>;
   exists(id: string): Promise<boolean>;
   hardDelete(id: string): Promise<void>;
 }
@@ -107,23 +145,33 @@ export class PrismaPostRepository extends PrismaCrudRepository implements PostRe
     return this.prisma.post.findFirst({ where: { id, deletedAt: null }, include: postInclude });
   }
 
-  findPublicBySlug(slug: string): Promise<PostWithRelations | null> {
-    return this.prisma.post.findFirst({
-      where: { slug, status: 'PUBLISHED', deletedAt: null },
-      include: postInclude,
+  findByIdWithTranslations(id: string): Promise<LocalizedPost | null> {
+    return this.prisma.post.findUnique({
+      where: { id },
+      include: { ...postInclude, translations: true },
     });
   }
 
-  publicByAuthor(authorId: string): Promise<PostWithRelations[]> {
+  findPublicBySlug(slug: string, locale?: string): Promise<LocalizedPost | null> {
+    return this.prisma.post.findFirst({
+      where: { slug, status: 'PUBLISHED', deletedAt: null },
+      include: localizedPostInclude(locale),
+    });
+  }
+
+  publicByAuthor(authorId: string, locale?: string): Promise<LocalizedPost[]> {
     return this.prisma.post.findMany({
       where: { authorId, status: 'PUBLISHED', deletedAt: null },
-      include: postInclude,
+      include: localizedPostInclude(locale),
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
-  async listAndCount(filter: PostListFilter): Promise<{
-    items: PostWithRelations[];
+  async listAndCount(
+    filter: PostListFilter,
+    locale?: string,
+  ): Promise<{
+    items: LocalizedPost[];
     total: number;
   }> {
     const where: Prisma.PostWhereInput = {};
@@ -141,7 +189,7 @@ export class PrismaPostRepository extends PrismaCrudRepository implements PostRe
     const [items, total] = await this.prisma.$transaction([
       this.prisma.post.findMany({
         where,
-        include: postInclude,
+        include: localizedPostInclude(locale),
         orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
         skip: (filter.page - 1) * filter.perPage,
         take: filter.perPage,
@@ -183,5 +231,30 @@ export class PrismaPostRepository extends PrismaCrudRepository implements PostRe
 
   findIdBySlug(slug: string): Promise<{ id: string } | null> {
     return this.prisma.post.findUnique({ where: { slug }, select: { id: true } });
+  }
+
+  async upsertTranslation(
+    postId: string,
+    locale: string,
+    data: PostTranslationData,
+  ): Promise<void> {
+    // A save fully defines the locale's translation: absent fields become null so
+    // they fall back to the base at read time (full-row replace, no stale fields).
+    const fields = {
+      title: data.title ?? null,
+      excerpt: data.excerpt ?? null,
+      content: data.content ?? null,
+      metaTitle: data.metaTitle ?? null,
+      metaDescription: data.metaDescription ?? null,
+    };
+    await this.prisma.postTranslation.upsert({
+      where: { postId_locale: { postId, locale } },
+      create: { postId, locale, ...fields },
+      update: fields,
+    });
+  }
+
+  async deleteTranslation(postId: string, locale: string): Promise<void> {
+    await this.prisma.postTranslation.delete({ where: { postId_locale: { postId, locale } } });
   }
 }
