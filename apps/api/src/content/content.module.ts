@@ -5,7 +5,9 @@ import {
   PrismaCategoryRepository,
   PrismaPostLikeRepository,
   PrismaPostRepository,
+  PrismaSearchRepository,
   PrismaTagRepository,
+  SEARCH_REPOSITORY,
   TAG_REPOSITORY,
 } from '@cmstack-ts/db';
 import { Module } from '@nestjs/common';
@@ -58,6 +60,7 @@ import { TagsService } from './tags.service';
     provideRepository(CATEGORY_REPOSITORY, PrismaCategoryRepository),
     provideRepository(POST_REPOSITORY, PrismaPostRepository),
     provideRepository(POST_LIKE_REPOSITORY, PrismaPostLikeRepository),
+    provideRepository(SEARCH_REPOSITORY, PrismaSearchRepository),
   ],
 })
 export class ContentModule {}
