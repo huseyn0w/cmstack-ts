@@ -17,4 +17,10 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
-export { Prisma, PrismaClient } from '@prisma/client';
+// Re-export the generated Prisma surface (the `Prisma` namespace, `PrismaClient`,
+// and every model type such as `Setting`/`Post`/…) so consumers depend on
+// `@cmstack-ts/db` rather than reaching into `@prisma/client` directly.
+export * from '@prisma/client';
+
+// Repository layer (interfaces + DI tokens + Prisma implementations).
+export * from './repositories';

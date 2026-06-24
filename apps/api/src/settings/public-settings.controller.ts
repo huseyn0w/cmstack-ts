@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
 import type { ThemeSetting } from '@cmstack-ts/config';
+import { Controller, Get } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 
 /**

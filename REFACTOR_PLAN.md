@@ -86,7 +86,9 @@ reader should "finish the job" with domain-entity mappers.
    method, map to the HTTP response. **No business logic, no data access.**
 2. **Service** — owns all business logic: validation beyond shape, slug strategy,
    sanitisation, hashing, `publishedAt`/hook decisions, error→HTTP mapping,
-   orchestration, DTO mapping. **No Prisma query shapes.**
+   orchestration, DTO mapping, **and emitting domain events through the observer
+   (`HookRegistry`) where a write has a genuine side effect (§2.7)**. Reads/writes
+   data only through repositories. **No Prisma query shapes.**
 3. **Repository** (`packages/db`) — owns all data access: `where/include/select/
    orderBy/$transaction/connect/set/upsert/$queryRaw`. **Framework-free** (no
    `@nestjs/*`), returns Prisma payloads or `null`/`boolean`. Never throws HTTP
@@ -168,6 +170,39 @@ abstract class PrismaCrudRepository<Delegate extends {
 - Methods with real query shape (`listAndCount`, `findPublicBySlug`, the relation
   builders, `$queryRaw`) are written explicitly and get real contract tests; the
   inherited forwards do **not** get tautological "assert delete calls delete" tests.
+
+### 2.7 Observer/event policy — `service → repository → observer` (operator decision)
+The full data-flow is: **controller → service → repository** for data, and the
+**service emits a domain event through the observer** (`HookRegistry`, already in the
+codebase) **only where a write has a genuine side effect** (notifications, cache
+invalidation, search reindex, audit). Operator-chosen (over "emit on every write" and
+"repository emits"): keep the **repository pure/framework-free** (data only) and let
+the **service** own event emission — services already orchestrate, and `packages/db`
+stays decoupled and testable.
+
+Rules:
+- Events are emitted **after** the repository write succeeds, inside the service's
+  success path; `emit` is fault-isolated (a throwing listener can't fail the write).
+- **No speculative events.** An event is added only when a real subscriber exists or
+  is required by a matrix feature being built — not "just in case" (that would be the
+  dead-code/ceremony the guardrail forbids). New events extend the typed `ActionMap`/
+  `FilterMap` catalogue (`plugins/hooks.ts`); no `any`.
+- The repository never imports `HookRegistry`/`@nestjs/*` (keeps §2.4 intact).
+
+**Per-domain event map (genuine side effects only):**
+
+| Domain / write | Event (action) | Status | Consumer |
+|---|---|---|---|
+| Posts publish (`create`/`update` → PUBLISHED) | `post.published` | ✅ exists | reading-time sample plugin; future search reindex / cache invalidation |
+| Public post read | `public.post.render` (filter) | ✅ exists | plugins transform output |
+| Comment submit | `comment.created` | ➕ when **comment-notification email** (matrix §18) is built | email notifier |
+| Content publish/update/delete; theme change | `*.changed` (cache invalidation) | ➕ when the **caching layer** (matrix §17) is built | cache invalidator |
+| Settings theme change | `settings.theme.changed` | ⏸ deferred | none yet (no API-side cache today; arrives with the caching layer) |
+
+Domains with **no genuine side effect** today (Settings, SEO/GEO CRUD, Tags,
+Categories, Media metadata, Likes count) **do not emit** events now — adding them
+would be speculative. The hook points are recorded above so they attach cleanly when
+the consuming feature (caching, notifications, reindex) is built in Task 1.
 
 ---
 
@@ -547,4 +582,3 @@ Every executor MUST honour these; each maps to a real call in the current code.
 11. **`$transaction` array-batch form** for `posts.list`, `users.list`,
     `comments.list`, `media.list` — `prisma.$transaction([findMany, count])`, never
     sequential awaits, never interactive `$transaction(async tx => …)`.
-</content>
