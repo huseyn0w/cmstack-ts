@@ -136,19 +136,34 @@ effects) → repository (data access, framework-free, returns Prisma payloads)`.
 ---
 
 ## Continuation prompt (paste into a fresh window)
-> You are resuming the `cmstack-ts` repository-layer refactor (senior TS engineer,
-> autonomous). Working dir `/Users/huseyn0w/Desktop/SWE/cmstack/cmstack-ts`, branch
-> `refactor/repository-layer`. **Read first:** `cmstack-ts/HANDOFF.md`,
-> `cmstack-ts/REFACTOR_PLAN.md` (esp. §2.0 layering, §2.7 observer policy, §4 per-domain
-> contracts, §10 behaviour-preservation invariants), and the read-only canon
-> `../FEATURE_MATRIX.md` + `../DESIGN_SYSTEM.md` (do NOT edit the canon). Operating
-> rules: work autonomously (read/edit/run pnpm/vitest/biome/git locally without asking);
-> use Superpowers skills (TDD, subagent-driven-development, requesting-code-review,
-> verification-before-completion); model routing — Opus for architecture/refactor/review,
-> Sonnet for low-risk impl, Haiku only for lookups; for every refactored module dispatch
-> 2–3 independent adversarial Opus skeptics (behaviour/correctness/security/perf) and fix
-> findings; **reply to the operator in Russian**, code/docs in English. Resume from the
-> first PENDING item in HANDOFF (SEO/GEO domain). Keep the three-layer invariant
-> (controller→service→repository) and the observer policy. Refresh HANDOFF.md at each
-> milestone; show real `pnpm test`/biome/typecheck output, never claim green without it.
-> Mind the Write-tool `</content>` artifact (strip + re-format).
+> You are continuing the `cmstack-ts` engagement (senior TS engineer, autonomous).
+> Working dir `/Users/huseyn0w/Desktop/SWE/cmstack/cmstack-ts`, branch
+> `refactor/repository-layer` (clean tree, all committed). **Task 2 (architecture
+> refactor) + Task 4 (tests) are DONE and verified** — every service now reaches the DB
+> only through the repository layer in `packages/db/src/repositories`; 268 tests,
+> typecheck + biome clean, coverage gate enforced ≥80%. **Read first:**
+> `cmstack-ts/HANDOFF.md` (DONE/PENDING + this), `cmstack-ts/REFACTOR_PLAN.md` (esp.
+> §2.0 layering, §2.7 observer policy, §7 feature-parity register, §10 behaviour
+> invariants), `cmstack-ts/CLAUDE.md`, and the read-only canon `../FEATURE_MATRIX.md` +
+> `../DESIGN_SYSTEM.md` (do NOT edit the canon).
+>
+> **Resume with Task 1 (feature parity), `REFACTOR_PLAN.md` §7** — pick the first item
+> (suggest: per-content SEO meta fields, or password-reset+email, as lower-risk starts).
+> Each feature: brainstorm scope if unclear → write/plan → TDD → wire through the
+> EXISTING three-layer pattern (controller→service→repository; new data access = a new
+> repository method/aggregate, never `this.prisma` in a service) → attach side-effects to
+> the observer (`HookRegistry`) per §2.7 → ship reversible Prisma migrations → 2–3
+> independent adversarial Opus skeptics → keep the coverage gate green. Then Task 3 (UI,
+> §8) and Task 5 (full README rewrite).
+>
+> Operating rules: work autonomously (read/edit/run pnpm/vitest/biome/git locally without
+> asking); model routing — Opus for architecture/decisions/review, Sonnet for low-risk
+> impl, Haiku only for lookups; **reply to the operator in Russian**, code/comments/docs
+> in English. Show real `pnpm test`/typecheck/biome output — never claim green without the
+> run. Refresh HANDOFF.md at each milestone. **Gotcha:** the Write tool appends a stray
+> `</content>` line — strip it (`perl -0pi -e 's/\n?<\/content>\s*$//' <file>`) and run
+> `pnpm format` before testing. Conventions to copy from the finished refactor: repo =
+> interface + `X_REPOSITORY` Symbol + `PrismaXRepository` (trivial ones extend
+> `PrismaCrudRepository`); wire via `provideRepository(TOKEN, Impl)` in the feature
+> module; service test fakes typed `Record<keyof XRepo, Mock>`; import model+repo types
+> from `@cmstack-ts/db` (never `@prisma/client`); repos never catch P2002/P2025.
