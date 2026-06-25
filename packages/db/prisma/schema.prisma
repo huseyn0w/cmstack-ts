@@ -318,6 +318,66 @@ model FaqItem {
   @@index([order])
 }
 
+// --- Menus / Navigation (Task 1 §7 #4) ---------------------------------------
+
+enum MenuItemType {
+  POST
+  PAGE
+  CATEGORY
+  CUSTOM
+}
+
+/// A named navigation menu bound to a theme render location (e.g. "primary",
+/// "footer"). The location is the stable key the public theme renders by.
+model Menu {
+  id        String     @id @default(cuid())
+  name      String
+  location  String     @unique
+  items     MenuItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+/// A single menu entry. Nested via self-referential parentId (public dropdowns).
+/// targetId is a polymorphic, non-FK reference to a Post/Page/Category row for
+/// the matching type; CUSTOM items carry a url instead. The base label is the
+/// default locale (en); per-locale overrides live in MenuItemTranslation.
+model MenuItem {
+  id           String                @id @default(cuid())
+  menuId       String
+  menu         Menu                  @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parentId     String?
+  parent       MenuItem?             @relation("MenuItemTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children     MenuItem[]            @relation("MenuItemTree")
+  order        Int                   @default(0)
+  type         MenuItemType
+  label        String
+  targetId     String?
+  url          String?
+  openInNewTab Boolean               @default(false)
+  translations MenuItemTranslation[]
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@index([menuId])
+  @@index([parentId])
+}
+
+/// Per-locale label override for a MenuItem (see PostTranslation pattern). Only
+/// the label is translatable; a null label falls back to the base item label.
+model MenuItemTranslation {
+  id         String   @id @default(cuid())
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  locale     String
+  label      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([menuItemId, locale])
+  @@index([locale])
+}
+
 // --- Comments (Phase 8) ------------------------------------------------------
 
 enum CommentStatus {
