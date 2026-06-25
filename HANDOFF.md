@@ -186,6 +186,34 @@ effects) → repository (data access, framework-free, returns Prisma payloads)`.
   repo) → refactor service → wire module → `pnpm test` + biome + typecheck → commit →
   adversarial skeptics.
 
+### Full stack for LIVE verification (the recipe used for §7 #1–#3, copy verbatim)
+The unit suite mocks Prisma and needs no DB; **live** checks (curl the API, SSR the web,
+`pnpm e2e` against a real stack) need db + api + web up. Gotcha: `packages/db` does NOT
+auto-load the root `.env`, so pass `DATABASE_URL` explicitly to every prisma command. The
+docker compose DB is named **`typress`** (legacy creds `typress/typress/typress`).
+```bash
+cd cmstack-ts
+docker compose up -d db                       # postgres on :5432 (named volume; persists)
+export DATABASE_URL="postgresql://typress:typress@localhost:5432/typress?schema=public"
+pnpm db:generate
+pnpm --filter @cmstack-ts/db exec prisma migrate deploy   # apply migrations
+pnpm db:seed                                  # idempotent demo seed (admin@cmstack-ts.local / admin12345)
+# Build (Next inlines NEXT_PUBLIC_* at BUILD time, so export before `pnpm build`):
+export NEXT_PUBLIC_API_URL=http://localhost:4000 NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
+  AUTH_URL=http://localhost:3000 AUTH_SECRET=dev-only-change-me-32+chars-please \
+  INTERNAL_API_SECRET=dev-only-change-me-internal-secret API_INTERNAL_URL=http://localhost:4000 \
+  WEB_ORIGIN=http://localhost:3000 NODE_ENV=production
+pnpm build
+# Run API (needs DATABASE_URL + AUTH_SECRET + INTERNAL_API_SECRET + WEB_ORIGIN + UPLOAD_DIR exported):
+UPLOAD_DIR=uploads node apps/api/dist/main.js &          # health: curl 127.0.0.1:4000/health/ready
+pnpm --filter @cmstack-ts/web start &                    # next start on :3000 (reuses the exported env)
+pnpm e2e                                                  # 11/11 (web-alone; live API checks are manual curl)
+```
+- **Password-reset live check:** with `SMTP_HOST` unset the mailer logs the reset link to
+  the API stdout — grep it: `grep -oE "reset-password\?token=[a-f0-9]+" <api-log>`.
+- **Reset the admin password** if a live test changed it: re-run request→confirm with
+  `admin12345`, or it's a throwaway dev DB.
+
 ## Gotchas
 - **`Write`-tool artifact:** files written via the Write tool get a stray `</content>`
   line appended — strip it (`perl -0pi -e 's/\n?<\/content>\s*$//' <file>`) and
@@ -200,32 +228,43 @@ effects) → repository (data access, framework-free, returns Prisma payloads)`.
 ## Continuation prompt (paste into a fresh window)
 > You are continuing the `cmstack-ts` engagement (senior TS engineer, autonomous).
 > Working dir `/Users/huseyn0w/Desktop/SWE/cmstack/cmstack-ts`, branch
-> `refactor/repository-layer` (clean tree, all committed). **Task 2 (architecture
-> refactor) + Task 4 (tests) are DONE and verified** — every service now reaches the DB
-> only through the repository layer in `packages/db/src/repositories`; 268 tests,
-> typecheck + biome clean, coverage gate enforced ≥80%. **Read first:**
-> `cmstack-ts/HANDOFF.md` (DONE/PENDING + this), `cmstack-ts/REFACTOR_PLAN.md` (esp.
-> §2.0 layering, §2.7 observer policy, §7 feature-parity register, §10 behaviour
-> invariants), `cmstack-ts/CLAUDE.md`, and the read-only canon `../FEATURE_MATRIX.md` +
-> `../DESIGN_SYSTEM.md` (do NOT edit the canon).
+> `refactor/repository-layer` (clean tree, all committed; **316 tests, typecheck + biome
+> clean, coverage gate ≥80%**). **DONE:** Task 2 (repository-layer refactor) + Task 4
+> (tests); the E2E baseline re-run (11/11, refactor confirmed black-box-invariant); and
+> **Task 1 §7 items #1 (per-locale content translation), #2 (per-content SEO meta), #3
+> (password reset + transactional email)** — all live-verified. **Read first:**
+> `cmstack-ts/HANDOFF.md` (the Task-1 progress section + "Full stack for LIVE verification"
+> recipe + Gotchas), `cmstack-ts/REFACTOR_PLAN.md` (§2.0 layering, §2.7 observer policy,
+> §7 feature register with #1–#3 checked, §10 invariants), `cmstack-ts/CLAUDE.md`, and the
+> read-only canon `../FEATURE_MATRIX.md` + `../DESIGN_SYSTEM.md` (do NOT edit the canon).
+> The design+plan docs for finished items are in `docs/superpowers/{specs,plans}/`.
 >
-> **Resume with Task 1 (feature parity), `REFACTOR_PLAN.md` §7** — pick the first item
-> (suggest: per-content SEO meta fields, or password-reset+email, as lower-risk starts).
-> Each feature: brainstorm scope if unclear → write/plan → TDD → wire through the
-> EXISTING three-layer pattern (controller→service→repository; new data access = a new
-> repository method/aggregate, never `this.prisma` in a service) → attach side-effects to
-> the observer (`HookRegistry`) per §2.7 → ship reversible Prisma migrations → 2–3
-> independent adversarial Opus skeptics → keep the coverage gate green. Then Task 3 (UI,
-> §8) and Task 5 (full README rewrite).
+> **Resume with Task 1 §7 in strict order (operator directive) — next is #4 menu
+> management** (admin drag-sortable builder; items reference posts/pages/categories/custom
+> URLs; **per-locale**, reusing the #1 translation pattern; public menu rendering). After
+> it: #5 contact form (reuses the #3 `MailService`), #6 GA4/GTM, #7 auto thumbnails, #8
+> dashboard translation tab-strip UI (the admin editor for the #1 translation endpoints),
+> #9 plugin admin UI, #10 Redis cache, then the shared net-new. Then Task 3 (UI §8) +
+> Task 5 (full README rewrite).
 >
-> Operating rules: work autonomously (read/edit/run pnpm/vitest/biome/git locally without
-> asking); model routing — Opus for architecture/decisions/review, Sonnet for low-risk
-> impl, Haiku only for lookups; **reply to the operator in Russian**, code/comments/docs
-> in English. Show real `pnpm test`/typecheck/biome output — never claim green without the
-> run. Refresh HANDOFF.md at each milestone. **Gotcha:** the Write tool appends a stray
-> `</content>` line — strip it (`perl -0pi -e 's/\n?<\/content>\s*$//' <file>`) and run
-> `pnpm format` before testing. Conventions to copy from the finished refactor: repo =
-> interface + `X_REPOSITORY` Symbol + `PrismaXRepository` (trivial ones extend
-> `PrismaCrudRepository`); wire via `provideRepository(TOKEN, Impl)` in the feature
-> module; service test fakes typed `Record<keyof XRepo, Mock>`; import model+repo types
-> from `@cmstack-ts/db` (never `@prisma/client`); repos never catch P2002/P2025.
+> Per-feature loop (proven this session): brainstorm scope if unclear → spec+plan under
+> `docs/superpowers/` → TDD by layer (config schema → prisma migration (additive/reversible)
+> → repository (+contract test) → service (+fake-repo test) → thin controller → web) → wire
+> through the EXISTING three-layer pattern (never `this.prisma` in a service) → observer
+> (`HookRegistry`) only on a real side effect (§2.7) → run full gates (`pnpm test` /
+> `typecheck` / `lint` / `pnpm vitest run --coverage`) → rebuild + `pnpm e2e` + **live curl/SSR
+> verification** (use the HANDOFF stack recipe) → adversarial self-review (inline, do NOT
+> spawn parallel agents — the operator dislikes the permission prompts) → refresh HANDOFF +
+> tick the §7 box → commit.
+>
+> Operating rules (operator-set, see saved memories): **work fully autonomously** — only ask
+> when truly critical; **NO `Co-Authored-By`/Claude trailer in commit messages**; reply to the
+> operator in **Russian**, code/comments/docs in English. Show real command output — never claim
+> green without the run. Conventions: repo = interface + `X_REPOSITORY` Symbol +
+> `PrismaXRepository` (trivial ones extend `PrismaCrudRepository`); wire via
+> `provideRepository(TOKEN, Impl)`; service test fakes typed `Record<keyof XRepo, Mock>`; import
+> model+repo types from `@cmstack-ts/db` (never `@prisma/client`); repos never catch P2002/P2025;
+> locales come from `@cmstack-ts/config` `LOCALES`/`DEFAULT_LOCALE`. **Gotcha:** if the Write tool
+> appends a stray `</content>` line, strip it (`perl -0pi -e 's/\n?<\/content>\s*$//' <file>`) +
+> `pnpm format`. The docker `db` container is likely already up (named DB `typress`); `packages/db`
+> needs `DATABASE_URL` passed explicitly to prisma commands.
