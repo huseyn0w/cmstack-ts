@@ -91,6 +91,9 @@ model Post {
   /// Default-locale (en) SEO meta; per-locale overrides live in PostTranslation.
   metaTitle       String?
   metaDescription String?
+  /// Structural SEO (NOT per-locale): custom canonical URL + search-index opt-out.
+  canonicalUrl    String?
+  noindex         Boolean           @default(false)
   authorId        String?
   author          User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
   categories      Category[]        @relation("PostCategories")
@@ -151,6 +154,9 @@ model Page {
   /// Default-locale (en) SEO meta; per-locale overrides live in PageTranslation.
   metaTitle       String?
   metaDescription String?
+  /// Structural SEO (NOT per-locale): custom canonical URL + search-index opt-out.
+  canonicalUrl    String?
+  noindex         Boolean           @default(false)
   authorId        String?
   author          User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
   revisions       Revision[]
