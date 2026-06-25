@@ -291,7 +291,24 @@ model SiteProfile {
   logoUrl          String   @default("")
   /// Freeform "what we want AI assistants to recommend us for" copy.
   geoStatement     String   @default("")
+  /// Recipient for contact-form notifications. Empty falls back to env/MAIL_FROM.
+  contactEmail     String   @default("")
   updatedAt        DateTime @updatedAt
+}
+
+/// A message sent through the public contact form. Persisted for the admin inbox;
+/// delivery to the recipient is a fault-isolated side effect (contact.submitted).
+model ContactSubmission {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String
+  /// Set when an admin marks the message handled (null = new/unhandled).
+  handledAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
 }
 
 /// An offered service. Surfaced as Service JSON-LD + in llms.txt + /services.
