@@ -175,3 +175,14 @@ export {
   resolveMenuItemUrl,
   normalizeCustomUrl,
 } from './menu';
+export {
+  contactSubmissionSchema,
+  type ContactSubmissionInput,
+  adminContactSchema,
+  type AdminContact,
+  adminContactListSchema,
+  type AdminContactList,
+  updateContactSchema,
+  type UpdateContactInput,
+  resolveContactRecipient,
+} from './contact';

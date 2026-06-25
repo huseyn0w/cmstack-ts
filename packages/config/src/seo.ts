@@ -19,6 +19,8 @@ export const updateSiteProfileSchema = z.object({
   logoUrl: optionalUrl(1000).default(''),
   /** Freeform "what we want AI assistants to recommend us for" copy. */
   geoStatement: z.string().trim().max(5000).default(''),
+  /** Recipient for contact-form notifications (empty falls back to env/MAIL_FROM). */
+  contactEmail: z.literal('').or(z.string().trim().email().max(200)).default(''),
 });
 export type UpdateSiteProfileInput = z.infer<typeof updateSiteProfileSchema>;
 
@@ -29,6 +31,7 @@ export const siteProfileSchema = z.object({
   url: z.string(),
   logoUrl: z.string(),
   geoStatement: z.string(),
+  contactEmail: z.string(),
 });
 export type SiteProfile = z.infer<typeof siteProfileSchema>;
 

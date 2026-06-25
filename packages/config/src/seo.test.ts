@@ -54,6 +54,7 @@ describe('seoContentSchema', () => {
         url: '',
         logoUrl: '',
         geoStatement: 'g',
+        contactEmail: '',
       },
       services: [{ id: '1', name: 'S', description: '', order: 0 }],
       faqs: [{ id: '2', question: 'Q', answer: 'A', order: 0 }],
