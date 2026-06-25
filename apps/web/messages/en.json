@@ -75,5 +75,10 @@
     "send": "Send message",
     "success": "Thanks — your message has been sent.",
     "error": "Something went wrong. Please try again."
+  },
+  "consent": {
+    "message": "We use cookies for analytics. You can accept or decline.",
+    "accept": "Accept",
+    "decline": "Decline"
   }
 }

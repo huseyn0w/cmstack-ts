@@ -75,5 +75,10 @@
     "send": "Nachricht senden",
     "success": "Danke — Ihre Nachricht wurde gesendet.",
     "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+  },
+  "consent": {
+    "message": "Wir verwenden Cookies für Analysen. Sie können zustimmen oder ablehnen.",
+    "accept": "Zustimmen",
+    "decline": "Ablehnen"
   }
 }

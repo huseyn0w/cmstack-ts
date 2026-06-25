@@ -83,7 +83,9 @@ describe('updateSiteProfileSchema — analytics & verification', () => {
 
   it('caps the custom verification list at 20', () => {
     const many = Array.from({ length: 21 }, (_, i) => ({ name: `m${i}`, content: 'x' }));
-    expect(() => updateSiteProfileSchema.parse({ ...base, customVerificationTags: many })).toThrow();
+    expect(() =>
+      updateSiteProfileSchema.parse({ ...base, customVerificationTags: many }),
+    ).toThrow();
   });
 });
 

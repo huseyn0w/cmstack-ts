@@ -284,3 +284,17 @@ a {
   gap: 0.4rem;
   padding-left: 0.75rem;
 }
+
+/* Cookie-consent banner buttons (public site, theme-scoped vars). */
+.ts-consent-btn {
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.15));
+  border-radius: 0.375rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.ts-consent-accept {
+  background: var(--accent, #111);
+  color: var(--bg, #fff);
+  border-color: var(--accent, #111);
+}

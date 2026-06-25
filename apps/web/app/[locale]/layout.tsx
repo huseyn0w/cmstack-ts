@@ -1,10 +1,12 @@
+import { AnalyticsLoader } from '@/components/public/analytics-loader';
+import { routing } from '@/i18n/routing';
 import { getSeoContent } from '@/lib/seo/fetch';
 import { buildVerificationMeta } from '@cmstack-ts/config';
 import type { Metadata } from 'next';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { routing } from '@/i18n/routing';
 import type { ReactNode } from 'react';
 
 /**
@@ -43,5 +45,20 @@ export default async function LocaleLayout({
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  return children;
+
+  const { profile } = await getSeoContent();
+  const consentCookie = (await cookies()).get('ts-consent')?.value;
+  const initialConsent =
+    consentCookie === 'accepted' || consentCookie === 'declined' ? consentCookie : 'undecided';
+
+  return (
+    <>
+      {children}
+      <AnalyticsLoader
+        gaId={profile.ga4MeasurementId}
+        gtmId={profile.gtmContainerId}
+        initialConsent={initialConsent}
+      />
+    </>
+  );
 }
