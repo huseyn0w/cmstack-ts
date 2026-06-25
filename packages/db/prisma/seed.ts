@@ -22,6 +22,7 @@ const PERMISSIONS = [
   { action: 'manage', subject: 'Setting' },
   { action: 'manage', subject: 'Seo' },
   { action: 'manage', subject: 'Comment' },
+  { action: 'manage', subject: 'Menu' },
 ] as const;
 
 // Roles and the permissions they grant. `Member` is the safe default for new
@@ -45,6 +46,7 @@ const ROLES: Record<
       { action: 'manage', subject: 'Media' },
       { action: 'manage', subject: 'Seo' },
       { action: 'manage', subject: 'Comment' },
+      { action: 'manage', subject: 'Menu' },
     ],
   },
   Member: {
@@ -374,6 +376,103 @@ async function seedTranslations() {
   }
 }
 
+/**
+ * Idempotent menu seed: upsert each menu by its unique location, then reset its
+ * items to the demo set (deleting items cascades their translations). Shows a
+ * managed, localized navigation (en base + de/ru label overrides) replacing the
+ * themes' hardcoded links, including one nested child and one Post reference.
+ */
+async function seedMenus() {
+  const firstPost = await prisma.post.findFirst({
+    where: { status: 'PUBLISHED', deletedAt: null },
+    orderBy: { publishedAt: 'asc' },
+    select: { id: true },
+  });
+
+  async function resetMenu(location: string, name: string) {
+    const menu = await prisma.menu.upsert({
+      where: { location },
+      update: { name },
+      create: { location, name },
+    });
+    await prisma.menuItem.deleteMany({ where: { menuId: menu.id } });
+    return menu.id;
+  }
+
+  async function addItem(
+    menuId: string,
+    data: {
+      parentId?: string;
+      order: number;
+      type: 'POST' | 'PAGE' | 'CATEGORY' | 'CUSTOM';
+      label: string;
+      url?: string;
+      targetId?: string;
+      labels?: { de?: string; ru?: string };
+    },
+  ) {
+    const item = await prisma.menuItem.create({
+      data: {
+        menuId,
+        parentId: data.parentId ?? null,
+        order: data.order,
+        type: data.type,
+        label: data.label,
+        url: data.url ?? null,
+        targetId: data.targetId ?? null,
+      },
+    });
+    const rows = [
+      data.labels?.de ? { menuItemId: item.id, locale: 'de', label: data.labels.de } : null,
+      data.labels?.ru ? { menuItemId: item.id, locale: 'ru', label: data.labels.ru } : null,
+    ].filter((r): r is { menuItemId: string; locale: string; label: string } => r !== null);
+    if (rows.length > 0) await prisma.menuItemTranslation.createMany({ data: rows });
+    return item.id;
+  }
+
+  const primary = await resetMenu('primary', 'Main navigation');
+  await addItem(primary, {
+    order: 0,
+    type: 'CUSTOM',
+    label: 'Blog',
+    url: '/blog',
+    labels: { de: 'Blog', ru: 'Блог' },
+  });
+  const services = await addItem(primary, {
+    order: 1,
+    type: 'CUSTOM',
+    label: 'Services',
+    url: '/services',
+    labels: { de: 'Leistungen', ru: 'Услуги' },
+  });
+  await addItem(primary, {
+    parentId: services,
+    order: 0,
+    type: 'CUSTOM',
+    label: 'Search',
+    url: '/search',
+    labels: { de: 'Suche', ru: 'Поиск' },
+  });
+  if (firstPost) {
+    await addItem(primary, {
+      order: 2,
+      type: 'POST',
+      label: 'Featured',
+      targetId: firstPost.id,
+      labels: { de: 'Empfohlen', ru: 'Избранное' },
+    });
+  }
+
+  const footer = await resetMenu('footer', 'Footer');
+  await addItem(footer, {
+    order: 0,
+    type: 'CUSTOM',
+    label: 'Search',
+    url: '/search',
+    labels: { de: 'Suche', ru: 'Поиск' },
+  });
+}
+
 async function main() {
   // Permissions
   for (const p of PERMISSIONS) {
@@ -432,6 +531,7 @@ async function main() {
 
   await seedSeo();
   await seedComments();
+  await seedMenus();
 
   console.log(`✓ Seeded ${PERMISSIONS.length} permissions, ${Object.keys(ROLES).length} roles.`);
   console.log(`✓ Admin user: ${ADMIN_EMAIL}. Password comes from SEED_ADMIN_PASSWORD`);
