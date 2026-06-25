@@ -297,6 +297,12 @@ describe('PostsService.upsertTranslation', () => {
     expect(posts.upsertTranslation).not.toHaveBeenCalled();
   });
 
+  it('an empty-string field is not stored (must fall back to base, not overlay it)', async () => {
+    posts.findActiveById.mockResolvedValue(postRow());
+    await service.upsertTranslation('p1', 'de', { title: 'DE', content: '', metaDescription: '' });
+    expect(posts.upsertTranslation).toHaveBeenCalledWith('p1', 'de', { title: 'DE' });
+  });
+
   it('throws NotFound when the base post is missing/trashed', async () => {
     posts.findActiveById.mockResolvedValue(null);
     await expect(service.upsertTranslation('x', 'de', { title: 'T' })).rejects.toBeInstanceOf(

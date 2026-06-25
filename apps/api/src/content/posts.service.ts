@@ -186,16 +186,17 @@ export class PostsService {
   /** Create or replace a post's translation for a non-default locale. */
   async upsertTranslation(id: string, locale: string, input: PostTranslationInput): Promise<void> {
     await this.ensureActive(id);
+    // An empty field is "no override" (the locale falls back to base), so empty
+    // strings are never stored — otherwise an empty value would overlay the base.
     const data: PostTranslationData = {};
-    if (input.title !== undefined) data.title = input.title;
-    if (input.excerpt !== undefined) data.excerpt = input.excerpt;
-    if (input.content !== undefined) data.content = this.sanitizer.sanitize(input.content);
-    if (input.metaTitle !== undefined) data.metaTitle = input.metaTitle;
-    if (input.metaDescription !== undefined) data.metaDescription = input.metaDescription;
+    if (input.title) data.title = input.title;
+    if (input.excerpt) data.excerpt = input.excerpt;
+    if (input.content) data.content = this.sanitizer.sanitize(input.content);
+    if (input.metaTitle) data.metaTitle = input.metaTitle;
+    if (input.metaDescription) data.metaDescription = input.metaDescription;
 
-    // An all-empty save clears the translation (the locale falls back to base).
-    const hasAny = Object.values(data).some((v) => v !== undefined && v !== '');
-    if (!hasAny) {
+    // Nothing to store -> clear the translation row entirely.
+    if (Object.keys(data).length === 0) {
       await this.deleteTranslation(id, locale);
       return;
     }
