@@ -60,6 +60,8 @@ export interface PageRepository {
   setDeletedAt(id: string, when: Date | null): Promise<void>;
   restore(id: string): Promise<PageWithAuthor>;
   findIdBySlug(slug: string): Promise<{ id: string } | null>;
+  /** Map of id → slug for the given ids (menu item URL resolution; no N+1). */
+  slugsByIds(ids: string[]): Promise<Record<string, string>>;
   /** Create or replace the page's translation for `locale` (full-row replace). */
   upsertTranslation(pageId: string, locale: string, data: PageTranslationData): Promise<void>;
   deleteTranslation(pageId: string, locale: string): Promise<void>;
@@ -84,6 +86,15 @@ export class PrismaPageRepository extends PrismaCrudRepository implements PageRe
 
   findActiveById(id: string): Promise<PageWithAuthor | null> {
     return this.prisma.page.findFirst({ where: { id, deletedAt: null }, include: pageInclude });
+  }
+
+  async slugsByIds(ids: string[]): Promise<Record<string, string>> {
+    if (ids.length === 0) return {};
+    const rows = await this.prisma.page.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, slug: true },
+    });
+    return Object.fromEntries(rows.map((r) => [r.id, r.slug]));
   }
 
   findByIdWithTranslations(id: string): Promise<LocalizedPage | null> {

@@ -86,6 +86,8 @@ export type PostListFilter = {
 export interface PostRepository {
   /** Id of a PUBLISHED, non-trashed post by slug, or null (shared with Likes/Comments). */
   findPublishedIdBySlug(slug: string): Promise<string | null>;
+  /** Map of id → slug for the given ids (menu item URL resolution; no N+1). */
+  slugsByIds(ids: string[]): Promise<Record<string, string>>;
   create(data: PostCreateData): Promise<PostWithRelations>;
   findById(id: string): Promise<PostWithRelations | null>;
   /** Non-trashed post by id (deletedAt: null) — the editable view. */
@@ -124,6 +126,15 @@ export class PrismaPostRepository extends PrismaCrudRepository implements PostRe
       select: { id: true },
     });
     return post?.id ?? null;
+  }
+
+  async slugsByIds(ids: string[]): Promise<Record<string, string>> {
+    if (ids.length === 0) return {};
+    const rows = await this.prisma.post.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, slug: true },
+    });
+    return Object.fromEntries(rows.map((r) => [r.id, r.slug]));
   }
 
   create(data: PostCreateData): Promise<PostWithRelations> {

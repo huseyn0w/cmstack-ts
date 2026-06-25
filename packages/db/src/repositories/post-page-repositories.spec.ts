@@ -156,6 +156,27 @@ describe('PrismaPostRepository localization', () => {
     });
   });
 
+  it('slugsByIds selects id+slug for the given ids and returns an id→slug map', async () => {
+    const { repo, post } = postRepo();
+    post.findMany.mockResolvedValue([
+      { id: 'a', slug: 'alpha' },
+      { id: 'b', slug: 'beta' },
+    ]);
+    const map = await repo.slugsByIds(['a', 'b']);
+    expect(post.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['a', 'b'] } },
+      select: { id: true, slug: true },
+    });
+    expect(map).toEqual({ a: 'alpha', b: 'beta' });
+  });
+
+  it('slugsByIds short-circuits on an empty id list (no query)', async () => {
+    const { repo, post } = postRepo();
+    const map = await repo.slugsByIds([]);
+    expect(post.findMany).not.toHaveBeenCalled();
+    expect(map).toEqual({});
+  });
+
   it('findByIdWithTranslations includes ALL translations (admin edit)', async () => {
     const { repo, post } = postRepo();
     post.findUnique.mockResolvedValue(null);

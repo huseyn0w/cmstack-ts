@@ -21,6 +21,8 @@ export interface CategoryRepository {
   list(): Promise<Category[]>;
   update(id: string, data: CategoryUpdateData): Promise<Category>;
   findIdBySlug(slug: string): Promise<{ id: string } | null>;
+  /** Map of id → slug for the given ids (menu item URL resolution; no N+1). */
+  slugsByIds(ids: string[]): Promise<Record<string, string>>;
   exists(id: string): Promise<boolean>;
   hardDelete(id: string): Promise<void>;
 }
@@ -52,5 +54,14 @@ export class PrismaCategoryRepository extends PrismaCrudRepository implements Ca
 
   findIdBySlug(slug: string): Promise<{ id: string } | null> {
     return this.prisma.category.findUnique({ where: { slug }, select: { id: true } });
+  }
+
+  async slugsByIds(ids: string[]): Promise<Record<string, string>> {
+    if (ids.length === 0) return {};
+    const rows = await this.prisma.category.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, slug: true },
+    });
+    return Object.fromEntries(rows.map((r) => [r.id, r.slug]));
   }
 }
