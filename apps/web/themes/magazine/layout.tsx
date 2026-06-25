@@ -1,4 +1,5 @@
 import { LocaleSwitcher } from '@/components/i18n/locale-switcher';
+import { SiteMenu } from '@/components/public/site-menu';
 import { Link } from '@/i18n/navigation';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
@@ -65,15 +66,22 @@ export async function MagazineLayout({ children }: { children: ReactNode }) {
             textTransform: 'uppercase',
           }}
         >
-          <Link href="/blog" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
-            {t('blog')}
-          </Link>
-          <Link href="/services" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
-            {t('services')}
-          </Link>
-          <Link href="/search" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
-            {t('search')}
-          </Link>
+          <SiteMenu
+            location="primary"
+            fallback={
+              <>
+                <Link href="/blog" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
+                  {t('blog')}
+                </Link>
+                <Link href="/services" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
+                  {t('services')}
+                </Link>
+                <Link href="/search" style={{ color: 'var(--fg)', textDecoration: 'none' }}>
+                  {t('search')}
+                </Link>
+              </>
+            }
+          />
           <Link href="/signin" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
             {t('signIn')}
           </Link>

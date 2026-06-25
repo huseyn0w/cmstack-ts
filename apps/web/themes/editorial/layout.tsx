@@ -1,4 +1,5 @@
 import { LocaleSwitcher } from '@/components/i18n/locale-switcher';
+import { SiteMenu } from '@/components/public/site-menu';
 import { Link } from '@/i18n/navigation';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
@@ -42,15 +43,22 @@ export async function EditorialLayout({ children }: { children: ReactNode }) {
           Cmstack-TS
         </Link>
         <nav style={{ display: 'flex', gap: '1.25rem', fontSize: 14, alignItems: 'center' }}>
-          <Link href="/blog" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
-            {t('blog')}
-          </Link>
-          <Link href="/services" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
-            {t('services')}
-          </Link>
-          <Link href="/search" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
-            {t('search')}
-          </Link>
+          <SiteMenu
+            location="primary"
+            fallback={
+              <>
+                <Link href="/blog" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
+                  {t('blog')}
+                </Link>
+                <Link href="/services" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
+                  {t('services')}
+                </Link>
+                <Link href="/search" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
+                  {t('search')}
+                </Link>
+              </>
+            }
+          />
           <Link href="/signin" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
             {t('signIn')}
           </Link>
@@ -71,9 +79,16 @@ export async function EditorialLayout({ children }: { children: ReactNode }) {
           fontSize: 12,
           letterSpacing: '0.04em',
           textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem',
         }}
       >
-        © {new Date().getFullYear()} Cmstack-TS · {tf('editorial')}
+        <SiteMenu location="footer" fallback={null} />
+        <span>
+          © {new Date().getFullYear()} Cmstack-TS · {tf('editorial')}
+        </span>
       </footer>
     </div>
   );
