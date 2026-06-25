@@ -293,6 +293,18 @@ model SiteProfile {
   geoStatement     String   @default("")
   /// Recipient for contact-form notifications. Empty falls back to env/MAIL_FROM.
   contactEmail     String   @default("")
+  /// GA4 measurement id (G-XXXX). Empty = analytics disabled.
+  ga4MeasurementId           String   @default("")
+  /// GTM container id (GTM-XXXX). Empty = disabled.
+  gtmContainerId             String   @default("")
+  /// Search-engine / platform ownership tokens (meta-tag value only).
+  googleSiteVerification     String   @default("")
+  bingSiteVerification       String   @default("")
+  yandexVerification         String   @default("")
+  facebookDomainVerification String   @default("")
+  pinterestVerification      String   @default("")
+  /// Arbitrary [{ name, content }] verification meta tags (future-proof escape hatch).
+  customVerificationTags     Json     @default("[]")
   updatedAt        DateTime @updatedAt
 }
 
