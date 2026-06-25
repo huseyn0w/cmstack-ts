@@ -44,6 +44,8 @@ export class PagesService {
       status: input.status ?? 'DRAFT',
       metaTitle: input.metaTitle ?? null,
       metaDescription: input.metaDescription ?? null,
+      canonicalUrl: input.canonicalUrl ?? null,
+      noindex: input.noindex ?? false,
       authorId,
     });
     return this.toDetail(page, []);
@@ -62,6 +64,8 @@ export class PagesService {
     if (input.status !== undefined) data.status = input.status;
     if (input.metaTitle !== undefined) data.metaTitle = input.metaTitle ?? null;
     if (input.metaDescription !== undefined) data.metaDescription = input.metaDescription ?? null;
+    if (input.canonicalUrl !== undefined) data.canonicalUrl = input.canonicalUrl ?? null;
+    if (input.noindex !== undefined) data.noindex = input.noindex;
 
     const page = await this.pages.update(id, data);
     return this.toDetail(page, []);
@@ -191,6 +195,8 @@ export class PagesService {
       status: page.status,
       metaTitle: page.metaTitle,
       metaDescription: page.metaDescription,
+      canonicalUrl: page.canonicalUrl,
+      noindex: page.noindex,
       author: page.author
         ? { id: page.author.id, name: page.author.name, image: page.author.image }
         : null,

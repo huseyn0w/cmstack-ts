@@ -17,6 +17,8 @@ function postRow(over: Partial<PostWithRelations> = {}): PostWithRelations {
     publishedAt: null,
     metaTitle: null,
     metaDescription: null,
+    canonicalUrl: null,
+    noindex: false,
     authorId: 'u1',
     deletedAt: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
@@ -207,6 +209,21 @@ describe('PostsService meta + localization', () => {
     const data = posts.create.mock.calls[0]?.[0];
     expect(data.metaTitle).toBe('MT');
     expect(data.metaDescription).toBe('MD');
+  });
+
+  it('create passes canonicalUrl/noindex through; detail + summary surface them', async () => {
+    posts.create.mockResolvedValue(
+      postRow({ canonicalUrl: 'https://x.test/p', noindex: true, status: 'PUBLISHED' }),
+    );
+    const detail = await service.create(
+      { title: 'T', content: '', canonicalUrl: 'https://x.test/p', noindex: true },
+      'u1',
+    );
+    const data = posts.create.mock.calls[0]?.[0];
+    expect(data.canonicalUrl).toBe('https://x.test/p');
+    expect(data.noindex).toBe(true);
+    expect(detail.canonicalUrl).toBe('https://x.test/p');
+    expect(detail.noindex).toBe(true);
   });
 
   it('the default locale (en) reads base-only (no locale to the repo)', async () => {

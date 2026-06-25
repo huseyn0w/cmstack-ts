@@ -71,6 +71,8 @@ export class PostsService {
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
         metaTitle: input.metaTitle ?? null,
         metaDescription: input.metaDescription ?? null,
+        canonicalUrl: input.canonicalUrl ?? null,
+        noindex: input.noindex ?? false,
         authorId,
         categoryIds: input.categoryIds,
         tagIds: input.tagIds,
@@ -114,6 +116,8 @@ export class PostsService {
     }
     if (input.metaTitle !== undefined) data.metaTitle = input.metaTitle ?? null;
     if (input.metaDescription !== undefined) data.metaDescription = input.metaDescription ?? null;
+    if (input.canonicalUrl !== undefined) data.canonicalUrl = input.canonicalUrl ?? null;
+    if (input.noindex !== undefined) data.noindex = input.noindex;
     if (input.categoryIds !== undefined) data.categoryIds = input.categoryIds;
     if (input.tagIds !== undefined) data.tagIds = input.tagIds;
 
@@ -315,6 +319,7 @@ export class PostsService {
       excerpt: post.excerpt,
       status: post.status,
       publishedAt: post.publishedAt?.toISOString() ?? null,
+      noindex: post.noindex,
       author: post.author
         ? { id: post.author.id, name: post.author.name, image: post.author.image }
         : null,
@@ -331,6 +336,7 @@ export class PostsService {
       content: post.content,
       metaTitle: post.metaTitle,
       metaDescription: post.metaDescription,
+      canonicalUrl: post.canonicalUrl,
       translations,
     };
   }

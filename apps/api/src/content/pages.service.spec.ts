@@ -13,6 +13,8 @@ function pageRow(over: Partial<PageWithAuthor> = {}): PageWithAuthor {
     status: 'DRAFT',
     metaTitle: null,
     metaDescription: null,
+    canonicalUrl: null,
+    noindex: false,
     authorId: 'u1',
     deletedAt: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
