@@ -63,7 +63,8 @@ export async function generateMetadata({
     title,
     description,
     alternates,
-    robots: post.noindex ? { index: false, follow: false } : undefined,
+    // noindex (keep out of the index) but still follow links — the standard pairing.
+    robots: post.noindex ? { index: false } : undefined,
     openGraph: {
       type: 'article',
       title,
