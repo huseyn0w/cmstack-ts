@@ -1,7 +1,9 @@
 import { parseEnv } from '@cmstack-ts/config';
 import {
   ACCOUNT_REPOSITORY,
+  PASSWORD_RESET_TOKEN_REPOSITORY,
   PrismaAccountRepository,
+  PrismaPasswordResetTokenRepository,
   PrismaRoleRepository,
   PrismaUserRepository,
   ROLE_REPOSITORY,
@@ -12,11 +14,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { AdminController } from '../admin/admin.controller';
 import { AdminService } from '../admin/admin.service';
 import { PoliciesGuard } from '../authz/policies.guard';
+import { MailModule } from '../mail/mail.module';
 import { provideRepository } from '../persistence/repository.providers';
 import { AccountsController } from './accounts.controller';
 import { AccountsService } from './accounts.service';
 import { InternalSecretGuard } from './internal-secret.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { PasswordResetController } from './password-reset.controller';
+import { PasswordResetService } from './password-reset.service';
 import { PasswordService } from './password.service';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -32,19 +37,22 @@ import { UsersService } from './users.service';
         };
       },
     }),
+    MailModule,
   ],
-  controllers: [AccountsController, AdminController, UsersController],
+  controllers: [AccountsController, AdminController, UsersController, PasswordResetController],
   providers: [
     AccountsService,
     UsersService,
     AdminService,
     PasswordService,
+    PasswordResetService,
     JwtAuthGuard,
     PoliciesGuard,
     InternalSecretGuard,
     provideRepository(USER_REPOSITORY, PrismaUserRepository),
     provideRepository(ACCOUNT_REPOSITORY, PrismaAccountRepository),
     provideRepository(ROLE_REPOSITORY, PrismaRoleRepository),
+    provideRepository(PASSWORD_RESET_TOKEN_REPOSITORY, PrismaPasswordResetTokenRepository),
   ],
   // Exported so other feature modules can reuse the auth guards (which depend on
   // JwtService + AccountsService) to protect their own routes.

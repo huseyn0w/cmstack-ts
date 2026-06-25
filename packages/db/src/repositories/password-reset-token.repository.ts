@@ -13,7 +13,9 @@ export interface PasswordResetTokenRepository {
   create(data: PasswordResetTokenCreateData): Promise<void>;
   /** Look a token up by its stored hash (expiry/used checks stay in the service). */
   findByHash(tokenHash: string): Promise<PasswordResetTokenRow | null>;
-  /** Invalidate every token for a user (called on a successful reset, and before issuing a new one). */
+  /** Mark a token consumed so it can never be replayed (single-use). */
+  markUsed(id: string): Promise<void>;
+  /** Clear every token for a user (called before issuing a new one). */
   deleteAllForUser(userId: string): Promise<void>;
 }
 
@@ -28,6 +30,10 @@ export class PrismaPasswordResetTokenRepository implements PasswordResetTokenRep
 
   findByHash(tokenHash: string): Promise<PasswordResetTokenRow | null> {
     return this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+  }
+
+  async markUsed(id: string): Promise<void> {
+    await this.prisma.passwordResetToken.update({ where: { id }, data: { usedAt: new Date() } });
   }
 
   async deleteAllForUser(userId: string): Promise<void> {
