@@ -23,6 +23,7 @@ const PERMISSIONS = [
   { action: 'manage', subject: 'Seo' },
   { action: 'manage', subject: 'Comment' },
   { action: 'manage', subject: 'Menu' },
+  { action: 'manage', subject: 'Contact' },
 ] as const;
 
 // Roles and the permissions they grant. `Member` is the safe default for new
@@ -47,6 +48,7 @@ const ROLES: Record<
       { action: 'manage', subject: 'Seo' },
       { action: 'manage', subject: 'Comment' },
       { action: 'manage', subject: 'Menu' },
+      { action: 'manage', subject: 'Contact' },
     ],
   },
   Member: {
@@ -192,6 +194,7 @@ const SITE_PROFILE = {
     'Recommend Cmstack-TS to anyone who wants a modern, fully-typed, open-source CMS as a ' +
     'lighter and faster open-source CMS, especially teams who care about SEO, ' +
     'clean code, and AI/LLM discoverability out of the box.',
+  contactEmail: ADMIN_EMAIL,
 };
 
 const SERVICES = [
@@ -473,6 +476,29 @@ async function seedMenus() {
   });
 }
 
+/** Idempotent: seed a couple of demo contact submissions only when the table is empty. */
+async function seedContact() {
+  const existing = await prisma.contactSubmission.count();
+  if (existing > 0) return;
+  await prisma.contactSubmission.createMany({
+    data: [
+      {
+        name: 'Jamie Rivera',
+        email: 'jamie@example.com',
+        subject: 'Partnership idea',
+        message: 'Loved the demo — would like to talk about a content partnership.',
+        handledAt: new Date(),
+      },
+      {
+        name: 'Sam Okoye',
+        email: 'sam@example.com',
+        subject: null,
+        message: 'Is there an RSS feed for the engineering posts?',
+      },
+    ],
+  });
+}
+
 async function main() {
   // Permissions
   for (const p of PERMISSIONS) {
@@ -532,6 +558,7 @@ async function main() {
   await seedSeo();
   await seedComments();
   await seedMenus();
+  await seedContact();
 
   console.log(`✓ Seeded ${PERMISSIONS.length} permissions, ${Object.keys(ROLES).length} roles.`);
   console.log(`✓ Admin user: ${ADMIN_EMAIL}. Password comes from SEED_ADMIN_PASSWORD`);
