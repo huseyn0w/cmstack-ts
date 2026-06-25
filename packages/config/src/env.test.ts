@@ -21,6 +21,15 @@ describe('parseEnv', () => {
     expect(env.API_PORT).toBe(5001);
   });
 
+  it('leaves SMTP unset by default and applies mail defaults', () => {
+    const env = parseEnv(valid);
+    expect(env.SMTP_HOST).toBeUndefined();
+    expect(env.SMTP_PORT).toBe(587);
+    expect(env.SMTP_SECURE).toBe(false);
+    expect(env.MAIL_FROM).toBe('Cmstack-TS <noreply@localhost>');
+    expect(env.PASSWORD_RESET_TTL_MINUTES).toBe(60);
+  });
+
   it('accepts a known NODE_ENV value', () => {
     expect(parseEnv({ ...valid, NODE_ENV: 'production' }).NODE_ENV).toBe('production');
   });

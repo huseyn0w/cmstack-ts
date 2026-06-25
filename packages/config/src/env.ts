@@ -35,6 +35,20 @@ export const envSchema = z.object({
   RECAPTCHA_SECRET_KEY: z.string().optional(),
   // Minimum acceptable v3 score (0..1) when reCAPTCHA is configured.
   RECAPTCHA_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.5),
+
+  // Transactional email (SMTP). Optional: when SMTP_HOST is unset the mailer logs
+  // messages to the console instead of sending (so the local/demo stack runs
+  // without a real SMTP server). Set host+from (and usually user/password) for
+  // real delivery.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  // The From address for outgoing mail (e.g. "Cmstack-TS <noreply@example.com>").
+  MAIL_FROM: z.string().default('Cmstack-TS <noreply@localhost>'),
+  // How long a password-reset token stays valid (minutes).
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(60),
 });
 
 export type Env = z.infer<typeof envSchema>;

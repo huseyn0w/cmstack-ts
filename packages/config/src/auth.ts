@@ -55,6 +55,19 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/** Request a password-reset link. Always answered 200 (no account enumeration). */
+export const passwordResetRequestSchema = z.object({
+  email: z.string().email().toLowerCase(),
+});
+export type PasswordResetRequestInput = z.infer<typeof passwordResetRequestSchema>;
+
+/** Complete a password reset with the emailed token. */
+export const passwordResetConfirmSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+export type PasswordResetConfirmInput = z.infer<typeof passwordResetConfirmSchema>;
+
 /**
  * Server-to-server OAuth upsert. Called by the web server (Auth.js) after a
  * successful provider sign-in; protected by an internal shared secret so it can
