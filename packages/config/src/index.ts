@@ -87,6 +87,8 @@ export {
   type UpdateSiteProfileInput,
   siteProfileSchema,
   type SiteProfile,
+  verificationTagSchema,
+  type VerificationTag,
   createServiceSchema,
   type CreateServiceInput,
   updateServiceSchema,
@@ -102,6 +104,11 @@ export {
   seoContentSchema,
   type SeoContent,
 } from './seo';
+export {
+  buildVerificationMeta,
+  type VerificationMeta,
+  type VerificationSource,
+} from './verification';
 export {
   commentStatusSchema,
   type CommentStatus,

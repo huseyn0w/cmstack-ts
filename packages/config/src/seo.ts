@@ -9,6 +9,33 @@ import { z } from 'zod';
 /** Optional URL field: a valid absolute URL or an empty string. */
 const optionalUrl = (max: number) => z.literal('').or(z.string().trim().url().max(max));
 
+/** Token-ish charset for verification meta values — excludes < > " ' and whitespace. */
+const verificationToken = (max: number) =>
+  z.literal('').or(
+    z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9._:\-+/=]+$/)
+      .max(max),
+  );
+
+/** A single arbitrary verification meta tag (`<meta name=content>`). */
+export const verificationTagSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9._:\-]+$/)
+    .min(1)
+    .max(100),
+  content: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9._:\-+/=]+$/)
+    .min(1)
+    .max(256),
+});
+export type VerificationTag = z.infer<typeof verificationTagSchema>;
+
 // --- Site / organization profile (singleton) --------------------------------
 
 export const updateSiteProfileSchema = z.object({
@@ -21,6 +48,34 @@ export const updateSiteProfileSchema = z.object({
   geoStatement: z.string().trim().max(5000).default(''),
   /** Recipient for contact-form notifications (empty falls back to env/MAIL_FROM). */
   contactEmail: z.literal('').or(z.string().trim().email().max(200)).default(''),
+  /** GA4 measurement id (`G-XXXX`) or empty. Public-site analytics. */
+  ga4MeasurementId: z
+    .literal('')
+    .or(
+      z
+        .string()
+        .trim()
+        .regex(/^G-[A-Z0-9]+$/)
+        .max(32),
+    )
+    .default(''),
+  /** GTM container id (`GTM-XXXX`) or empty. */
+  gtmContainerId: z
+    .literal('')
+    .or(
+      z
+        .string()
+        .trim()
+        .regex(/^GTM-[A-Z0-9]+$/)
+        .max(32),
+    )
+    .default(''),
+  googleSiteVerification: verificationToken(256).default(''),
+  bingSiteVerification: verificationToken(256).default(''),
+  yandexVerification: verificationToken(256).default(''),
+  facebookDomainVerification: verificationToken(256).default(''),
+  pinterestVerification: verificationToken(256).default(''),
+  customVerificationTags: z.array(verificationTagSchema).max(20).default([]),
 });
 export type UpdateSiteProfileInput = z.infer<typeof updateSiteProfileSchema>;
 
@@ -32,6 +87,14 @@ export const siteProfileSchema = z.object({
   logoUrl: z.string(),
   geoStatement: z.string(),
   contactEmail: z.string(),
+  ga4MeasurementId: z.string(),
+  gtmContainerId: z.string(),
+  googleSiteVerification: z.string(),
+  bingSiteVerification: z.string(),
+  yandexVerification: z.string(),
+  facebookDomainVerification: z.string(),
+  pinterestVerification: z.string(),
+  customVerificationTags: z.array(verificationTagSchema).default([]),
 });
 export type SiteProfile = z.infer<typeof siteProfileSchema>;
 
