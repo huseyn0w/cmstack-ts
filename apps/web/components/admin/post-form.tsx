@@ -45,6 +45,10 @@ interface PostFormProps {
     excerpt?: string;
     content: string;
     status?: 'DRAFT' | 'PUBLISHED';
+    metaTitle?: string;
+    metaDescription?: string;
+    canonicalUrl?: string;
+    noindex?: boolean;
     categoryIds?: string[];
     tagIds?: string[];
   }) => Promise<CreateResult>;
@@ -56,6 +60,10 @@ interface PostFormProps {
       excerpt?: string;
       content?: string;
       status?: 'DRAFT' | 'PUBLISHED';
+      metaTitle?: string;
+      metaDescription?: string;
+      canonicalUrl?: string;
+      noindex?: boolean;
       categoryIds?: string[];
       tagIds?: string[];
     },
@@ -82,6 +90,10 @@ export function PostForm({ categories, tags, post, createAction, updateAction }:
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? '');
   const [content, setContent] = useState(post?.content ?? '');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>(post?.status ?? 'DRAFT');
+  const [metaTitle, setMetaTitle] = useState(post?.metaTitle ?? '');
+  const [metaDescription, setMetaDescription] = useState(post?.metaDescription ?? '');
+  const [canonicalUrl, setCanonicalUrl] = useState(post?.canonicalUrl ?? '');
+  const [noindex, setNoindex] = useState(post?.noindex ?? false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
     post?.categories.map((c) => c.id) ?? [],
   );
@@ -115,6 +127,10 @@ export function PostForm({ categories, tags, post, createAction, updateAction }:
       excerpt: excerpt.trim() || undefined,
       content,
       status: targetStatus,
+      metaTitle: metaTitle.trim() || undefined,
+      metaDescription: metaDescription.trim() || undefined,
+      canonicalUrl: canonicalUrl.trim() || undefined,
+      noindex,
       categoryIds: selectedCategoryIds,
       tagIds: selectedTagIds,
     };
@@ -224,6 +240,58 @@ export function PostForm({ categories, tags, post, createAction, updateAction }:
               placeholder="Write your post content here…"
             />
           </div>
+
+          {/* SEO */}
+          <fieldset className="space-y-4 rounded-md border border-border p-4">
+            <legend className="px-1 text-sm font-medium text-foreground">SEO</legend>
+            <div className="space-y-1.5">
+              <Label htmlFor="post-meta-title">
+                Meta title <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="post-meta-title"
+                value={metaTitle}
+                onChange={(e) => setMetaTitle(e.target.value)}
+                placeholder="Defaults to the post title"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="post-meta-description">
+                Meta description{' '}
+                <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Textarea
+                id="post-meta-description"
+                value={metaDescription}
+                onChange={(e) => setMetaDescription(e.target.value)}
+                placeholder="Defaults to the excerpt"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="post-canonical">
+                Canonical URL <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="post-canonical"
+                value={canonicalUrl}
+                onChange={(e) => setCanonicalUrl(e.target.value)}
+                placeholder="https://example.com/canonical-path"
+                className="font-mono text-xs"
+              />
+            </div>
+            <label className="flex items-center gap-2.5 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={noindex}
+                onChange={(e) => setNoindex(e.target.checked)}
+                className="rounded border-border accent-primary"
+              />
+              <span className="text-foreground">
+                Hide from search engines (noindex; excludes from sitemap)
+              </span>
+            </label>
+          </fieldset>
         </div>
 
         {/* Sidebar */}

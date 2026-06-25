@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import type { PageDetail } from '@cmstack-ts/config';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -39,6 +40,10 @@ interface PageFormProps {
     slug?: string;
     content: string;
     status?: 'DRAFT' | 'PUBLISHED';
+    metaTitle?: string;
+    metaDescription?: string;
+    canonicalUrl?: string;
+    noindex?: boolean;
   }) => Promise<CreateResult>;
   updateAction?: (
     id: string,
@@ -47,6 +52,10 @@ interface PageFormProps {
       slug?: string;
       content?: string;
       status?: 'DRAFT' | 'PUBLISHED';
+      metaTitle?: string;
+      metaDescription?: string;
+      canonicalUrl?: string;
+      noindex?: boolean;
     },
   ) => Promise<UpdateResult>;
 }
@@ -70,6 +79,10 @@ export function PageForm({ page, createAction, updateAction }: PageFormProps) {
   const [slugTouched, setSlugTouched] = useState(!!page?.slug);
   const [content, setContent] = useState(page?.content ?? '');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>(page?.status ?? 'DRAFT');
+  const [metaTitle, setMetaTitle] = useState(page?.metaTitle ?? '');
+  const [metaDescription, setMetaDescription] = useState(page?.metaDescription ?? '');
+  const [canonicalUrl, setCanonicalUrl] = useState(page?.canonicalUrl ?? '');
+  const [noindex, setNoindex] = useState(page?.noindex ?? false);
 
   const handleTitleChange = useCallback(
     (val: string) => {
@@ -88,6 +101,10 @@ export function PageForm({ page, createAction, updateAction }: PageFormProps) {
       slug: slug.trim() || undefined,
       content,
       status: targetStatus,
+      metaTitle: metaTitle.trim() || undefined,
+      metaDescription: metaDescription.trim() || undefined,
+      canonicalUrl: canonicalUrl.trim() || undefined,
+      noindex,
     };
 
     startTransition(async () => {
@@ -181,6 +198,56 @@ export function PageForm({ page, createAction, updateAction }: PageFormProps) {
               placeholder="Write your page content here…"
             />
           </div>
+
+          {/* SEO */}
+          <fieldset className="space-y-4 rounded-md border border-border p-4">
+            <legend className="px-1 text-sm font-medium text-foreground">SEO</legend>
+            <div className="space-y-1.5">
+              <Label htmlFor="page-meta-title">
+                Meta title <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="page-meta-title"
+                value={metaTitle}
+                onChange={(e) => setMetaTitle(e.target.value)}
+                placeholder="Defaults to the page title"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="page-meta-description">
+                Meta description{' '}
+                <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Textarea
+                id="page-meta-description"
+                value={metaDescription}
+                onChange={(e) => setMetaDescription(e.target.value)}
+                placeholder="A short summary for search engines…"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="page-canonical">
+                Canonical URL <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="page-canonical"
+                value={canonicalUrl}
+                onChange={(e) => setCanonicalUrl(e.target.value)}
+                placeholder="https://example.com/canonical-path"
+                className="font-mono text-xs"
+              />
+            </div>
+            <label className="flex items-center gap-2.5 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={noindex}
+                onChange={(e) => setNoindex(e.target.checked)}
+                className="rounded border-border accent-primary"
+              />
+              <span className="text-foreground">Hide from search engines (noindex)</span>
+            </label>
+          </fieldset>
         </div>
 
         {/* Sidebar */}
