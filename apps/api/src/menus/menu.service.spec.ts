@@ -1,6 +1,8 @@
 import { type MenuRepository, type MenuWithTree, Prisma } from '@cmstack-ts/db';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CacheService } from '../cache/cache.service';
+import type { HookRegistry } from '../plugins/hook-registry';
 import { MenuService } from './menu.service';
 
 type Item = MenuWithTree['items'][number];
@@ -38,6 +40,8 @@ let menus: Record<keyof MenuRepository, Mock>;
 let posts: { slugsByIds: Mock };
 let pages: { slugsByIds: Mock };
 let categories: { slugsByIds: Mock };
+let cache: { getOrSet: Mock; invalidate: Mock };
+let hooks: { emit: Mock };
 let service: MenuService;
 
 beforeEach(() => {
@@ -62,11 +66,18 @@ beforeEach(() => {
   posts = { slugsByIds: vi.fn().mockResolvedValue({}) };
   pages = { slugsByIds: vi.fn().mockResolvedValue({}) };
   categories = { slugsByIds: vi.fn().mockResolvedValue({}) };
+  cache = {
+    getOrSet: vi.fn((_key: string, factory: () => Promise<unknown>) => factory()),
+    invalidate: vi.fn(),
+  };
+  hooks = { emit: vi.fn().mockResolvedValue(undefined) };
   service = new MenuService(
     menus as unknown as MenuRepository,
     posts as never,
     pages as never,
     categories as never,
+    cache as unknown as CacheService,
+    hooks as unknown as HookRegistry,
   );
 });
 
@@ -225,6 +236,21 @@ describe('applyStructure', () => {
       { id: 'a', parentId: null, order: 0 },
       { id: 'b', parentId: 'a', order: 0 },
     ]);
+  });
+
+  it('emits menu.changed after applying a structure', async () => {
+    menus.exists.mockResolvedValue(true);
+    menus.listItemIds.mockResolvedValue(['a']);
+    await service.applyStructure('m1', { nodes: [{ id: 'a', parentId: null, order: 0 }] });
+    expect(hooks.emit).toHaveBeenCalledWith('menu.changed', expect.any(Object));
+  });
+});
+
+describe('menu cache', () => {
+  it('reads the public menu through the cache', async () => {
+    menus.findByLocation.mockResolvedValue(null);
+    await service.getPublicMenu('primary', 'en');
+    expect(cache.getOrSet).toHaveBeenCalled();
   });
 });
 

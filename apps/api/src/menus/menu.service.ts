@@ -34,6 +34,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CACHE_NS, cacheKey } from '../cache/cache.keys';
+import { CacheService } from '../cache/cache.service';
+import { HookRegistry } from '../plugins/hook-registry';
 
 /** Admin builder view of a single item (raw fields + nested children + all locales). */
 export type AdminMenuItem = {
@@ -61,6 +64,8 @@ export class MenuService {
     @Inject(POST_REPOSITORY) private readonly posts: PostRepository,
     @Inject(PAGE_REPOSITORY) private readonly pages: PageRepository,
     @Inject(CATEGORY_REPOSITORY) private readonly categories: CategoryRepository,
+    private readonly cache: CacheService,
+    private readonly hooks: HookRegistry,
   ) {}
 
   // --- Menus -----------------------------------------------------------------
@@ -73,6 +78,7 @@ export class MenuService {
   async createMenu(input: CreateMenuInput): Promise<MenuSummary> {
     try {
       const m = await this.menus.create({ name: input.name, location: input.location });
+      await this.hooks.emit('menu.changed', { location: m.location });
       return { id: m.id, name: m.name, location: m.location };
     } catch (e) {
       if (isKnownError(e, 'P2002'))
@@ -84,6 +90,7 @@ export class MenuService {
   async updateMenu(id: string, input: UpdateMenuInput): Promise<MenuSummary> {
     try {
       const m = await this.menus.update(id, input);
+      await this.hooks.emit('menu.changed', { location: m.location });
       return { id: m.id, name: m.name, location: m.location };
     } catch (e) {
       if (isKnownError(e, 'P2002'))
@@ -96,6 +103,7 @@ export class MenuService {
   async deleteMenu(id: string): Promise<void> {
     try {
       await this.menus.hardDelete(id);
+      await this.hooks.emit('menu.changed', {});
     } catch (e) {
       if (isKnownError(e, 'P2025')) throw new NotFoundException('Menu not found');
       throw e;
@@ -130,6 +138,7 @@ export class MenuService {
       url,
       openInNewTab: input.openInNewTab ?? false,
     });
+    await this.hooks.emit('menu.changed', {});
     return this.toAdminItem(row, []);
   }
 
@@ -148,6 +157,7 @@ export class MenuService {
       url,
       openInNewTab: input.openInNewTab ?? false,
     });
+    await this.hooks.emit('menu.changed', {});
     return this.toAdminItem(row, []);
   }
 
@@ -155,6 +165,7 @@ export class MenuService {
     if (!(await this.menus.itemExists(itemId, menuId)))
       throw new NotFoundException('Menu item not found');
     await this.menus.deleteItem(itemId);
+    await this.hooks.emit('menu.changed', {});
   }
 
   async applyStructure(menuId: string, input: MenuStructureInput): Promise<void> {
@@ -172,6 +183,7 @@ export class MenuService {
     }
     this.assertNoCycle(input.nodes);
     await this.menus.applyStructure(menuId, input.nodes);
+    await this.hooks.emit('menu.changed', {});
   }
 
   // --- Translations ----------------------------------------------------------
@@ -190,6 +202,7 @@ export class MenuService {
       return;
     }
     await this.menus.upsertTranslation(itemId, locale, { label });
+    await this.hooks.emit('menu.changed', {});
   }
 
   async deleteTranslation(menuId: string, itemId: string, locale: string): Promise<void> {
@@ -201,12 +214,20 @@ export class MenuService {
       if (isKnownError(e, 'P2025')) return; // idempotent
       throw e;
     }
+    await this.hooks.emit('menu.changed', {});
   }
 
   // --- Public ----------------------------------------------------------------
 
   async getPublicMenu(location: string, locale: string): Promise<PublicMenu> {
     const safeLocale = (LOCALES as readonly string[]).includes(locale) ? locale : DEFAULT_LOCALE;
+    // Key on the resolved (safe) locale so junk locales share the default's entry.
+    return this.cache.getOrSet(cacheKey(CACHE_NS.MENUS, `${location}:${safeLocale}`), () =>
+      this.computePublicMenu(location, safeLocale),
+    );
+  }
+
+  private async computePublicMenu(location: string, safeLocale: string): Promise<PublicMenu> {
     const menu = await this.menus.findByLocation(location);
     if (!menu) return { location, items: [] };
 
