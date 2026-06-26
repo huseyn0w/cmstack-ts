@@ -8,6 +8,8 @@ import type {
 } from '@cmstack-ts/db';
 import { NotFoundException } from '@nestjs/common';
 import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CacheService } from '../cache/cache.service';
+import type { HookRegistry } from '../plugins/hook-registry';
 import { SeoService } from './seo.service';
 
 const fullProfile: SiteProfile = {
@@ -33,6 +35,8 @@ const fullProfile: SiteProfile = {
 let profiles: Record<keyof SiteProfileRepository, Mock>;
 let services: Record<keyof ServiceRepository, Mock>;
 let faqs: Record<keyof FaqRepository, Mock>;
+let cache: { getOrSet: Mock; invalidate: Mock };
+let hooks: { emit: Mock };
 let service: SeoService;
 
 beforeEach(() => {
@@ -51,10 +55,17 @@ beforeEach(() => {
     exists: vi.fn(),
     hardDelete: vi.fn(),
   };
+  cache = {
+    getOrSet: vi.fn((_key: string, factory: () => Promise<unknown>) => factory()),
+    invalidate: vi.fn(),
+  };
+  hooks = { emit: vi.fn().mockResolvedValue(undefined) };
   service = new SeoService(
     profiles as unknown as SiteProfileRepository,
     services as unknown as ServiceRepository,
     faqs as unknown as FaqRepository,
+    cache as unknown as CacheService,
+    hooks as unknown as HookRegistry,
   );
 });
 
@@ -207,5 +218,50 @@ describe('SeoService public content', () => {
       services: [],
       faqs: [],
     });
+  });
+
+  it('reads public content through the cache', async () => {
+    profiles.get.mockResolvedValue(null);
+    services.list.mockResolvedValue([]);
+    faqs.list.mockResolvedValue([]);
+    await service.getPublicContent();
+    expect(cache.getOrSet).toHaveBeenCalled();
+  });
+});
+
+describe('SeoService invalidation', () => {
+  it('emits seo.changed after a profile update', async () => {
+    const input = {
+      organizationName: 'New',
+      tagline: '',
+      description: '',
+      url: '',
+      logoUrl: '',
+      geoStatement: '',
+      contactEmail: '',
+      ga4MeasurementId: '',
+      gtmContainerId: '',
+      googleSiteVerification: '',
+      bingSiteVerification: '',
+      yandexVerification: '',
+      facebookDomainVerification: '',
+      pinterestVerification: '',
+      customVerificationTags: [],
+    };
+    profiles.upsert.mockResolvedValue({ id: 'default', ...input, updatedAt: new Date() });
+    await service.updateProfile(input);
+    expect(hooks.emit).toHaveBeenCalledWith('seo.changed', {});
+  });
+
+  it('emits seo.changed after creating a service', async () => {
+    services.create.mockResolvedValue({ id: 's1', name: 'n', description: 'd', order: 0 } as Service);
+    await service.createService({ name: 'n', description: 'd' });
+    expect(hooks.emit).toHaveBeenCalledWith('seo.changed', {});
+  });
+
+  it('emits seo.changed after removing a faq', async () => {
+    faqs.exists.mockResolvedValue(true);
+    await service.removeFaq('f1');
+    expect(hooks.emit).toHaveBeenCalledWith('seo.changed', {});
   });
 });

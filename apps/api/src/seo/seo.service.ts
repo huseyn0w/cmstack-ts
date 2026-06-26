@@ -20,6 +20,9 @@ import {
   type SiteProfileRepository,
 } from '@cmstack-ts/db';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { CACHE_NS, cacheKey } from '../cache/cache.keys';
+import { CacheService } from '../cache/cache.service';
+import { HookRegistry } from '../plugins/hook-registry';
 
 const DEFAULT_PROFILE: SiteProfile = {
   organizationName: 'Cmstack-TS',
@@ -45,6 +48,8 @@ export class SeoService {
     @Inject(SITE_PROFILE_REPOSITORY) private readonly profiles: SiteProfileRepository,
     @Inject(SERVICE_REPOSITORY) private readonly services: ServiceRepository,
     @Inject(FAQ_REPOSITORY) private readonly faqs: FaqRepository,
+    private readonly cache: CacheService,
+    private readonly hooks: HookRegistry,
   ) {}
 
   // --- Profile (singleton) ---------------------------------------------------
@@ -61,6 +66,7 @@ export class SeoService {
       ...input,
       customVerificationTags: input.customVerificationTags as Prisma.InputJsonValue,
     });
+    await this.hooks.emit('seo.changed', {});
     return this.toProfile(row);
   }
 
@@ -77,6 +83,7 @@ export class SeoService {
       description: input.description,
       order: input.order ?? 0,
     });
+    await this.hooks.emit('seo.changed', {});
     return this.toService(row);
   }
 
@@ -87,12 +94,14 @@ export class SeoService {
       description: input.description,
       order: input.order,
     });
+    await this.hooks.emit('seo.changed', {});
     return this.toService(row);
   }
 
   async removeService(id: string): Promise<void> {
     await this.ensureService(id);
     await this.services.hardDelete(id);
+    await this.hooks.emit('seo.changed', {});
   }
 
   // --- FAQ -------------------------------------------------------------------
@@ -108,6 +117,7 @@ export class SeoService {
       answer: input.answer,
       order: input.order ?? 0,
     });
+    await this.hooks.emit('seo.changed', {});
     return this.toFaq(row);
   }
 
@@ -118,23 +128,27 @@ export class SeoService {
       answer: input.answer,
       order: input.order,
     });
+    await this.hooks.emit('seo.changed', {});
     return this.toFaq(row);
   }
 
   async removeFaq(id: string): Promise<void> {
     await this.ensureFaq(id);
     await this.faqs.hardDelete(id);
+    await this.hooks.emit('seo.changed', {});
   }
 
   // --- Combined public payload ----------------------------------------------
 
   async getPublicContent(): Promise<SeoContent> {
-    const [profile, services, faqs] = await Promise.all([
-      this.getProfile(),
-      this.listServices(),
-      this.listFaqs(),
-    ]);
-    return { profile, services, faqs };
+    return this.cache.getOrSet(cacheKey(CACHE_NS.SEO, 'public'), async () => {
+      const [profile, services, faqs] = await Promise.all([
+        this.getProfile(),
+        this.listServices(),
+        this.listFaqs(),
+      ]);
+      return { profile, services, faqs };
+    });
   }
 
   private async ensureService(id: string): Promise<void> {
