@@ -51,6 +51,18 @@ export const envSchema = z.object({
   MAIL_FROM: z.string().default('Cmstack-TS <noreply@localhost>'),
   // How long a password-reset token stays valid (minutes).
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(60),
+
+  // Caching layer (feature parity §7 #10). REDIS_URL is optional: when unset, the
+  // API uses an in-process memory cache (single-worker only). Set it to a redis://
+  // URL for a shared, multi-worker-correct backend.
+  REDIS_URL: z.string().url().optional(),
+  // Default TTL (seconds) for cached public reads.
+  CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+  // Master switch. 'false' disables caching (every read hits the source).
+  CACHE_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

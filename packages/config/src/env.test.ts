@@ -53,4 +53,23 @@ describe('parseEnv', () => {
   it('defaults AUTH_TOKEN_TTL to 7d', () => {
     expect(parseEnv(valid).AUTH_TOKEN_TTL).toBe('7d');
   });
+
+  it('defaults cache settings when unset', () => {
+    const env = parseEnv(valid);
+    expect(env.REDIS_URL).toBeUndefined();
+    expect(env.CACHE_TTL_SECONDS).toBe(300);
+    expect(env.CACHE_ENABLED).toBe(true);
+  });
+
+  it('parses cache settings when provided', () => {
+    const env = parseEnv({
+      ...valid,
+      REDIS_URL: 'redis://localhost:6379',
+      CACHE_TTL_SECONDS: '60',
+      CACHE_ENABLED: 'false',
+    });
+    expect(env.REDIS_URL).toBe('redis://localhost:6379');
+    expect(env.CACHE_TTL_SECONDS).toBe(60);
+    expect(env.CACHE_ENABLED).toBe(false);
+  });
 });
