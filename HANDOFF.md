@@ -1,7 +1,7 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-26 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#7 done).** · **Branch:** `refactor/repository-layer` (off `main`)
-**Next phases:** Task 1 (feature parity) continuing per §7 order (next: #8 dashboard translation tab-strip UI); Task 3 (UI), Task 5 (README) not started.
+**Updated:** 2026-06-26 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#8 done).** · **Branch:** `refactor/repository-layer` (off `main`)
+**Next phases:** Task 1 (feature parity) continuing per §7 order (next: #9 plugin admin UI); Task 3 (UI), Task 5 (README) not started.
 
 ## Task 1 progress (feature parity, `REFACTOR_PLAN.md` §7 — strict order per operator)
 - **E2E baseline re-run (pre-Task-1):** full stack up (docker db + built api + built web),
@@ -163,8 +163,29 @@
   - **Scoped out (logged):** PDF thumbnails (needs a heavy PDF renderer); backfill of pre-existing
     media (only new uploads — a future one-off script); public `<img srcset>` responsive delivery;
     crop / focal-point / on-demand resize.
-- **Next §7 item:** **#8 — Dashboard translation editing UI** (per-locale tab strip; the admin
-  editor for the §7 #1 translation endpoints).
+- **§7 #8 — Dashboard translation editing UI: DONE** (2026-06-26). Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-06-26-translation-editing-ui.*`. **Web-only** — drives the
+  existing §7 #1 endpoints (`PUT/DELETE /{posts,pages}/:id/translations/:locale`); no API/schema/
+  migration change. Reusable client `components/admin/translations-panel.tsx` renders a **tab strip**
+  of override locales (`LOCALES` minus `DEFAULT_LOCALE` → de/ru) below the base (en) post/page form,
+  **edit mode only** (needs an id). Each locale: fields title/excerpt[post]/content (RichTextEditor)/
+  metaTitle/metaDescription pre-filled from the existing translation row (null→''), **base value as
+  the placeholder** (per-field fallback hint); **Save** (PUT) + **Clear translation** (DELETE,
+  idempotent) with per-locale `useTransition` + toasts. Pure `lib/admin/translation-input.ts`
+  (`buildTranslationInput` trims + drops empty → empty = no override, all-empty PUT clears the row;
+  `localeLabel`). New Server Actions `upsert/delete{Post,Page}TranslationAction` (validate
+  `{post,page}TranslationInputSchema`, `revalidatePath('/admin/{posts,pages}')` + `'/','layout'`).
+  Admin stays **English** (tab labels "Deutsch (de)"/"Русский (ru)"). Content stays
+  **server-sanitized** on the same `upsertTranslation` write path (verified — no new XSS surface).
+  **419 tests, typecheck/lint clean, coverage 89.75% (gate ≥80%), e2e 11/11**; live-verified
+  (panel Save PUT de → `/de/blog/<slug>` shows the override, en falls back to base; Clear DELETE →
+  `/de` falls back). Adversarial self-review: 0 HIGH/MED (locale validated by `localeSchema`, edit-only,
+  empty→fallback on both client+server, idempotent clear, sanitization confirmed).
+  - **Scoped out (logged):** Category/Tag name translation (no API yet — fast-follow from §7 #1);
+    translating slug/status/taxonomy (shared by design); machine translation; completeness indicator.
+  - **Gotcha hit during live verify:** the Docker daemon had stopped (DB unreachable, API 500s) —
+    `open -a Docker`, wait for `docker info`, `docker compose up -d db`, restart the API.
+- **Next §7 item:** **#9 — Plugin admin UI** + runtime enable/disable + render-region hooks.
 
 ---
 
@@ -333,22 +354,22 @@ pnpm e2e                                                  # 11/11 (web-alone; li
 ## Continuation prompt (paste into a fresh window)
 > You are continuing the `cmstack-ts` engagement (senior TS engineer, autonomous).
 > Working dir `/Users/huseyn0w/Desktop/SWE/cmstack/cmstack-ts`, branch
-> `refactor/repository-layer` (clean tree, all committed; **415 tests, typecheck + biome
+> `refactor/repository-layer` (clean tree, all committed; **419 tests, typecheck + biome
 > clean, coverage gate ≥80% (actual 89.75%)**). **DONE:** Task 2 (repository-layer refactor) + Task 4
 > (tests); the E2E baseline re-run (11/11, refactor confirmed black-box-invariant); and
 > **Task 1 §7 items #1 (per-locale content translation), #2 (per-content SEO meta), #3
 > (password reset + transactional email), #4 (menu management), #5 (contact form + email),
-> #6 (GA4/GTM + site verification + basic consent), #7 (auto thumbnails / image processing)** — all
-> live-verified. **Read first:**
+> #6 (GA4/GTM + site verification + basic consent), #7 (auto thumbnails / image processing),
+> #8 (dashboard translation editing UI)** — all live-verified. **Read first:**
 > `cmstack-ts/HANDOFF.md` (the Task-1 progress section + "Full stack for LIVE verification"
 > recipe + Gotchas), `cmstack-ts/REFACTOR_PLAN.md` (§2.0 layering, §2.7 observer policy,
-> §7 feature register with #1–#7 checked, §10 invariants), `cmstack-ts/CLAUDE.md`, and the
+> §7 feature register with #1–#8 checked, §10 invariants), `cmstack-ts/CLAUDE.md`, and the
 > read-only canon `../FEATURE_MATRIX.md` + `../DESIGN_SYSTEM.md` (do NOT edit the canon).
 > The design+plan docs for finished items are in `docs/superpowers/{specs,plans}/`.
 >
-> **Resume with Task 1 §7 in strict order (operator directive) — next is #8
-> dashboard translation tab-strip UI (the admin editor for the #1 translation endpoints),
-> #9 plugin admin UI, #10 Redis cache, then the shared net-new. Then Task 3 (UI §8) +
+> **Resume with Task 1 §7 in strict order (operator directive) — next is #9
+> plugin admin UI** + runtime enable/disable + render-region hooks. After it:
+> #10 Redis cache, then the shared net-new. Then Task 3 (UI §8) +
 > Task 5 (full README rewrite). **Observer note:** §7 #5 wired the first real side effect
 > (`contact.submitted` → mail listener); the comment-notification email (shared net-new) is the
 > next observer consumer.

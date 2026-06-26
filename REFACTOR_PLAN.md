@@ -556,7 +556,14 @@ From `../FEATURE_MATRIX.md` ("cmstack-ts needs"); nothing to be silently dropped
       deletes derivatives; row-create failure rolls back original + all derivatives. Admin media grid
       renders the thumb variant. PDF skipped; backfill/srcset/crop out of scope. 415 tests, coverage
       89.75%, e2e 11/11; live-verified (6MP jpg → 2 webp thumbs served as image/webp; 48MP png → 400).
-- [ ] **Dashboard translation editing UI** (per-locale tab strip) — after content i18n.
+- [x] **Dashboard translation editing UI** (per-locale tab strip) — after content i18n. **DONE**
+      (2026-06-26): web-only (drives the §7 #1 endpoints, no API/schema change). Reusable client
+      `TranslationsPanel` renders override-locale tabs (de/ru) below the base (en) post/page form
+      (edit mode only); per-locale **Save** (PUT) + **Clear** (DELETE) via new Server Actions; base
+      values shown as fallback placeholders; pure `buildTranslationInput` (trim + drop empty → empty
+      = fallback, all-empty clears the row). Content stays server-sanitized on the same write path.
+      419 tests, coverage 89.75%, e2e 11/11; live-verified (PUT de → /de shows override, en falls
+      back; DELETE → /de falls back). Out of scope: Category/Tag translation (no API — fast-follow).
 - [ ] **Plugin admin UI** + runtime enable/disable + render-region hooks.
 - [ ] **Caching layer** (Redis + page/fragment cache, invalidate on publish via `HookRegistry`).
 - [ ] Shared net-new: **revision-restore UI**, **scheduled publishing**, **RSS/Atom
