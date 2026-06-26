@@ -16,6 +16,18 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
@@ -24,10 +36,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       API_PORT: 4000
       DATABASE_URL: postgresql://${POSTGRES_USER:-cmstack-ts}:${POSTGRES_PASSWORD:-cmstack-ts}@db:5432/${POSTGRES_DB:-cmstack-ts}?schema=public
+      # Shared cache backend (multi-worker correct).
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       # Shared with the web app so it can sign tokens the API verifies.
       AUTH_SECRET: ${AUTH_SECRET:-dev-only-shared-auth-secret-change-me}
       AUTH_TOKEN_TTL: ${AUTH_TOKEN_TTL:-7d}
