@@ -33,7 +33,9 @@ export function withReadingTime(content: string): string {
  *  - an **action** listener that observes the `post.published` event.
  */
 export const readingTimePlugin: CmstackTsPlugin = {
-  name: 'reading-time',
+  id: 'reading-time',
+  name: 'Reading time',
+  description: 'Prepends an estimated reading-time badge to public post content.',
   register(api) {
     const logger = new Logger('plugin:reading-time');
 

@@ -38,5 +38,12 @@ export interface ActionMap {
   };
 }
 
+/** Render-region hooks: a named slot on the public site plugins inject HTML into. */
+export interface RegionMap {
+  /** Appended to the public site footer area. */
+  'site.footer': void;
+}
+
 export type FilterName = keyof FilterMap;
 export type ActionName = keyof ActionMap;
+export type RegionName = keyof RegionMap;
