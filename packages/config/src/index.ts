@@ -83,6 +83,16 @@ export {
   type ThemeSetting,
 } from './settings';
 export {
+  PLUGINS_ENABLED_KEY,
+  updatePluginSchema,
+  type UpdatePluginInput,
+  pluginInfoSchema,
+  type PluginInfo,
+  pluginInfoListSchema,
+  pluginRegionsSchema,
+  type PluginRegions,
+} from './plugins';
+export {
   updateSiteProfileSchema,
   type UpdateSiteProfileInput,
   siteProfileSchema,
