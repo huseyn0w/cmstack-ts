@@ -182,6 +182,24 @@ describe('MediaService.upload thumbnails', () => {
     expect(storage.save).toHaveBeenCalledTimes(1); // only the original
   });
 
+  it('rolls back the original AND every derivative when the row write fails', async () => {
+    processor.makeThumbnails.mockResolvedValue([
+      { label: 'thumb', width: 400, height: 320, data: Buffer.from('a') },
+    ]);
+    storage.save.mockResolvedValue(undefined);
+    media.create.mockRejectedValue(new Error('db down'));
+    const png = await makeTinyPng();
+    await expect(
+      service.upload(
+        { originalname: 'a.png', mimetype: 'image/png', size: png.length, buffer: png },
+        'u1',
+      ),
+    ).rejects.toThrow('db down');
+    const original = storage.save.mock.calls[0]?.[0] as string;
+    expect(storage.delete).toHaveBeenCalledWith(original);
+    expect(storage.delete).toHaveBeenCalledWith(`${original.replace(/\.png$/, '')}-thumb.webp`);
+  });
+
   it('remove deletes the original and every derivative key', async () => {
     media.findFilename.mockResolvedValue({
       filename: 'k.png',

@@ -546,7 +546,16 @@ From `../FEATURE_MATRIX.md` ("cmstack-ts needs"); nothing to be silently dropped
       Admin SEO form gained the fields incl. an add/remove custom-pairs editor. No observer event.
       404 tests, coverage 89.55%, e2e 11/11; live-verified (metas render publicly, absent on /admin,
       GA injected only after consent).
-- [ ] **Auto thumbnails / image processing** (decompression-bomb guard).
+- [x] **Auto thumbnails / image processing** (decompression-bomb guard). **DONE** (2026-06-26):
+      on image upload, `sharp` generates WebP derivatives (thumb ≤400, medium ≤1024, resize-to-fit,
+      no upscale) via an injected `ImageProcessor` (`IMAGE_PROCESSOR`); synchronous + fault-isolated
+      (generation failure → original still uploads with `thumbnails: []`, partial files cleaned).
+      Decompression-bomb guard: reject `width*height > MEDIA_MAX_MEGAPIXELS*1e6` (env, default 40) on
+      header dimensions before any decode + `sharp({ limitInputPixels })`. `Media.thumbnails` Json
+      (migration `..._media_thumbnails`, additive) → `[{label,width,height,url,size}]`. `remove`
+      deletes derivatives; row-create failure rolls back original + all derivatives. Admin media grid
+      renders the thumb variant. PDF skipped; backfill/srcset/crop out of scope. 415 tests, coverage
+      89.75%, e2e 11/11; live-verified (6MP jpg → 2 webp thumbs served as image/webp; 48MP png → 400).
 - [ ] **Dashboard translation editing UI** (per-locale tab strip) — after content i18n.
 - [ ] **Plugin admin UI** + runtime enable/disable + render-region hooks.
 - [ ] **Caching layer** (Redis + page/fragment cache, invalidate on publish via `HookRegistry`).

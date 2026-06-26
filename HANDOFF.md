@@ -1,7 +1,7 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-26 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#6 done).** · **Branch:** `refactor/repository-layer` (off `main`)
-**Next phases:** Task 1 (feature parity) continuing per §7 order (next: #7 auto thumbnails); Task 3 (UI), Task 5 (README) not started.
+**Updated:** 2026-06-26 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#7 done).** · **Branch:** `refactor/repository-layer` (off `main`)
+**Next phases:** Task 1 (feature parity) continuing per §7 order (next: #8 dashboard translation tab-strip UI); Task 3 (UI), Task 5 (README) not started.
 
 ## Task 1 progress (feature parity, `REFACTOR_PLAN.md` §7 — strict order per operator)
 - **E2E baseline re-run (pre-Task-1):** full stack up (docker db + built api + built web),
@@ -138,7 +138,33 @@
     persistent "manage cookies" surface → future GDPR module. AI-engine "verification" not faked
     (LinkedIn/Instagram/UpWork/ChatGPT/Claude/Perplexity/Gemini/xAI have no meta mechanism); their
     discoverability is already served by `robots.txt`/`llms.txt` (Phase 7).
-- **Next §7 item:** **#7 — Auto thumbnails / image processing** (decompression-bomb guard).
+- **§7 #7 — Auto thumbnails / image processing: DONE** (2026-06-26). Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-06-26-auto-thumbnails.*`. New dep **`sharp`** in `apps/api`.
+  On image upload, an injected `ImageProcessor` (`IMAGE_PROCESSOR` token, `SharpImageProcessor`,
+  bound in `MediaModule` with the env megapixel cap) generates **WebP** derivatives — `thumb` (≤400)
+  and `medium` (≤1024), `THUMBNAIL_SIZES` in `@cmstack-ts/config` — resize-to-fit, **no upscale**,
+  EXIF auto-rotate, GIF → static first frame, **PDF skipped**. Generation is **synchronous +
+  fault-isolated**: a sharp failure logs, cleans partial files, and the original still uploads with
+  `thumbnails: []`. **Decompression-bomb guard:** `MediaService.validateAndMeasure` rejects
+  `width*height > MEDIA_MAX_MEGAPIXELS*1e6` (env, default **40**, read directly so unit tests stay
+  default-safe — NOT via full `parseEnv()` which would throw on missing secrets) on the
+  `image-size` header **before any decode**, and `sharp` is constructed with `{ limitInputPixels }`.
+  Migration `20260625..._media_thumbnails` adds `Media.thumbnails Json @default("[]")` (additive);
+  config `thumbnailSchema` + `thumbnailKey(base,label)` → `<base>-<label>.webp`; `mediaSchema.thumbnails`
+  is **required**. `MediaService.upload` saves original → generates+saves derivatives (tracking keys)
+  → writes the row; **row-create failure rolls back original + all derivatives**; `remove` deletes
+  every derivative key. Repo `MediaCreateData.thumbnails: Prisma.InputJsonValue`, `findFilename` now
+  also selects `thumbnails`. Admin media grid renders the **thumb** variant (faster). **No observer
+  event** (part of upload, §2.7). `.env.example` documents `MEDIA_MAX_MEGAPIXELS`. **415 tests,
+  typecheck/lint clean, coverage 89.75% (gate ≥80%), e2e 11/11**; live-verified (6MP jpg → thumb
+  400x267 + medium 1024x683 served as `image/webp`; derivative files on disk; 48MP png → **400**).
+  Adversarial self-review added a regression test for derivative rollback on row-create failure;
+  0 HIGH/MED.
+  - **Scoped out (logged):** PDF thumbnails (needs a heavy PDF renderer); backfill of pre-existing
+    media (only new uploads — a future one-off script); public `<img srcset>` responsive delivery;
+    crop / focal-point / on-demand resize.
+- **Next §7 item:** **#8 — Dashboard translation editing UI** (per-locale tab strip; the admin
+  editor for the §7 #1 translation endpoints).
 
 ---
 
@@ -307,20 +333,20 @@ pnpm e2e                                                  # 11/11 (web-alone; li
 ## Continuation prompt (paste into a fresh window)
 > You are continuing the `cmstack-ts` engagement (senior TS engineer, autonomous).
 > Working dir `/Users/huseyn0w/Desktop/SWE/cmstack/cmstack-ts`, branch
-> `refactor/repository-layer` (clean tree, all committed; **404 tests, typecheck + biome
-> clean, coverage gate ≥80% (actual 89.55%)**). **DONE:** Task 2 (repository-layer refactor) + Task 4
+> `refactor/repository-layer` (clean tree, all committed; **415 tests, typecheck + biome
+> clean, coverage gate ≥80% (actual 89.75%)**). **DONE:** Task 2 (repository-layer refactor) + Task 4
 > (tests); the E2E baseline re-run (11/11, refactor confirmed black-box-invariant); and
 > **Task 1 §7 items #1 (per-locale content translation), #2 (per-content SEO meta), #3
 > (password reset + transactional email), #4 (menu management), #5 (contact form + email),
-> #6 (GA4/GTM + site verification + basic consent)** — all live-verified. **Read first:**
+> #6 (GA4/GTM + site verification + basic consent), #7 (auto thumbnails / image processing)** — all
+> live-verified. **Read first:**
 > `cmstack-ts/HANDOFF.md` (the Task-1 progress section + "Full stack for LIVE verification"
 > recipe + Gotchas), `cmstack-ts/REFACTOR_PLAN.md` (§2.0 layering, §2.7 observer policy,
-> §7 feature register with #1–#6 checked, §10 invariants), `cmstack-ts/CLAUDE.md`, and the
+> §7 feature register with #1–#7 checked, §10 invariants), `cmstack-ts/CLAUDE.md`, and the
 > read-only canon `../FEATURE_MATRIX.md` + `../DESIGN_SYSTEM.md` (do NOT edit the canon).
 > The design+plan docs for finished items are in `docs/superpowers/{specs,plans}/`.
 >
-> **Resume with Task 1 §7 in strict order (operator directive) — next is #7 auto thumbnails /
-> image processing** (decompression-bomb guard). After it: #8
+> **Resume with Task 1 §7 in strict order (operator directive) — next is #8
 > dashboard translation tab-strip UI (the admin editor for the #1 translation endpoints),
 > #9 plugin admin UI, #10 Redis cache, then the shared net-new. Then Task 3 (UI §8) +
 > Task 5 (full README rewrite). **Observer note:** §7 #5 wired the first real side effect
