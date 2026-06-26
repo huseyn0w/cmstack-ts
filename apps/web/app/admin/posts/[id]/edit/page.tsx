@@ -1,12 +1,15 @@
 import { PostForm } from '@/components/admin/post-form';
+import { RevisionsPanel } from '@/components/admin/revisions-panel';
 import { type TranslationField, TranslationsPanel } from '@/components/admin/translations-panel';
 import { apiGet } from '@/lib/admin/api';
+import type { RevisionField, RevisionView } from '@/lib/admin/revision-compare';
 import type { CategoryView, TagView } from '@/types/content';
 import { postDetailSchema } from '@cmstack-ts/config';
 import type { PostDetail } from '@cmstack-ts/config';
 import { notFound } from 'next/navigation';
 import {
   deletePostTranslationAction,
+  restorePostRevisionAction,
   updatePostAction,
   upsertPostTranslationAction,
 } from '../../actions';
@@ -20,6 +23,22 @@ const POST_FIELDS: TranslationField[] = [
   { key: 'metaTitle', label: 'Meta title', type: 'input' },
   { key: 'metaDescription', label: 'Meta description', type: 'textarea' },
 ];
+
+const POST_REVISION_FIELDS: RevisionField[] = [
+  { key: 'title', label: 'Title' },
+  { key: 'slug', label: 'Slug' },
+  { key: 'excerpt', label: 'Excerpt' },
+  { key: 'content', label: 'Content' },
+  { key: 'status', label: 'Status' },
+];
+
+async function fetchRevisions(id: string): Promise<RevisionView[]> {
+  try {
+    return await apiGet<RevisionView[]>(`/posts/${id}/revisions`);
+  } catch {
+    return [];
+  }
+}
 
 async function fetchPost(id: string): Promise<PostDetail | null> {
   try {
@@ -51,10 +70,11 @@ interface EditPostPageProps {
 
 export default async function EditPostPage({ params }: EditPostPageProps) {
   const { id } = await params;
-  const [post, categories, tags] = await Promise.all([
+  const [post, categories, tags, revisions] = await Promise.all([
     fetchPost(id),
     fetchCategories(),
     fetchTags(),
+    fetchRevisions(id),
   ]);
 
   if (!post) {
@@ -77,6 +97,19 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
         fields={POST_FIELDS}
         upsertAction={upsertPostTranslationAction}
         deleteAction={deletePostTranslationAction}
+      />
+      <RevisionsPanel
+        id={post.id}
+        current={{
+          title: post.title,
+          slug: post.slug,
+          excerpt: post.excerpt ?? '',
+          content: post.content,
+          status: post.status,
+        }}
+        revisions={revisions}
+        fields={POST_REVISION_FIELDS}
+        restoreAction={restorePostRevisionAction}
       />
     </>
   );

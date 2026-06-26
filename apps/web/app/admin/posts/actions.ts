@@ -55,6 +55,20 @@ export async function restorePostAction(id: string): Promise<ActionResult> {
   }
 }
 
+export async function restorePostRevisionAction(
+  id: string,
+  revisionId: string,
+): Promise<ActionResult> {
+  try {
+    await apiSend('POST', `/posts/${id}/revisions/${revisionId}/restore`);
+    revalidatePath('/admin/posts');
+    revalidatePath('/', 'layout');
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Failed to restore revision' };
+  }
+}
+
 export async function permanentDeletePostAction(id: string): Promise<ActionResult> {
   try {
     await apiSend('DELETE', `/posts/${id}/permanent`);
