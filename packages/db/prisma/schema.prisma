@@ -259,6 +259,8 @@ model Media {
   caption      String?
   /// Path the file is served at, relative to the API origin (e.g. /uploads/<key>).
   url          String
+  /// Generated WebP derivatives: [{ label, width, height, url, size }]. Empty = none.
+  thumbnails   Json     @default("[]")
   uploaderId   String?
   uploader     User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
