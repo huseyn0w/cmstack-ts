@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CACHE_NS } from './cache.keys';
 import type { CacheStore } from './cache-store';
+import { CACHE_NS } from './cache.keys';
 import { CacheService } from './cache.service';
 
 function fakeStore(overrides: Partial<CacheStore> = {}): CacheStore {

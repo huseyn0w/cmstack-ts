@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type RedisLike, RedisCacheStore } from './redis-cache-store';
+import { RedisCacheStore, type RedisLike } from './redis-cache-store';
 
 function fakeRedis(overrides: Partial<RedisLike> = {}): RedisLike {
   return {

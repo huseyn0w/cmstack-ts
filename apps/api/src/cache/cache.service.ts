@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type CacheNamespace, cachePrefix } from './cache.keys';
 import { CACHE_STORE, type CacheStore } from './cache-store';
+import { type CacheNamespace, cachePrefix } from './cache.keys';
 
 export interface CacheOptions {
   enabled: boolean;
