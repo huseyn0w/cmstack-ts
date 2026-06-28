@@ -1,7 +1,7 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; Task 1 (§7 #1–#10 + ALL shared net-new) COMPLETE; Task 3 (UI) IN PROGRESS — increments 1 (foundation), 2 (public themes → light default), 3 (UI kit → §5) done.** · **Branch:** `refactor/repository-layer` (off `main`)
-**Next phases:** Task 3 increment 4 (admin shell) · 2c (public chrome §5) · 5 (Lighthouse/WCAG **measured** — acceptance gate) + new canon components as screens need them + **Task 5 (README rewrite)**.
+**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; Task 1 (§7 #1–#10 + ALL shared net-new) COMPLETE; Task 3 (UI) DONE — all increments (1 foundation · 2 public themes+light default · 2c public chrome · 3 UI kit · 4 admin shell+skip-link · 5 measured Lighthouse/WCAG). Only Task 5 (README) remains.** · **Branch:** `refactor/repository-layer` (off `main`)
+**Measured (mobile):** A11y 100 / SEO 100 / BP 96 every public page; Perf home 98, content ~93–94 (web-font LCP under throttle — preload follow-up noted). **Next: Task 5 (README rewrite).**
 
 ## Task 3 (UI conformance to `../DESIGN_SYSTEM.md`) progress
 Plan: `docs/superpowers/plans/2026-06-28-task3-ui-design-system.md` (5 increments, one commit each).
@@ -49,6 +49,29 @@ Canon is the cross-stack visual contract: quiet-luxury editorial, LIGHT default 
   on garnet. ⚠️ **Watch-out for future increments:** any hand-rolled element putting fixed text on
   `var(--accent)` as a *background* has the same regression — audit per screen (text/link uses of
   `--accent` are fine: garnet on paper).
+- **Increment 2c — public chrome (editorial) → §5: DONE** (2026-06-28). Sticky 64px header
+  (semi-transparent `--bg` + backdrop-blur, mono wordmark lockup); mono eyebrows (home/blog/
+  category) + mono footer caption; **Breadcrumb** on blog posts (`nav[aria-label=Breadcrumb]`,
+  Home/Blog/title, `aria-current`, mirrors BreadcrumbList JSON-LD); home CTA radius-md (not pill).
+  New `nav.home` message key (en/de/ru). Magazine = intentional print-newspaper variant, left
+  coherent. Screenshot-verified; e2e 11/11.
+- **Increment 4 — admin shell → §5 + skip-to-content: DONE** (2026-06-28). Skip-to-content link
+  (first focusable, WCAG AA) → `#admin-main` (`tabIndex=-1`); sidebar 240→260px + mono group
+  labels. Shell was already largely §5 (surface sidebar, `--primary` active left-bar,
+  permission-gated items, 56px topbar w/ theme toggle + user menu, mobile drawer).
+  Authenticated screenshot-verified (mono group labels, garnet active bar, canon success badges,
+  serif stat numbers); e2e 11/11.
+- **Increment 5 — measured Lighthouse + WCAG: DONE** (2026-06-28). Ran Lighthouse (mobile, headless
+  Chrome, default throttling) on home/blog/post. **Measured: Accessibility 100, SEO 100,
+  Best-Practices 96 on every public page** (the WCAG-AA automated gate passes); **Performance: home
+  98 (passes ≥95), blog index ~94, blog post ~93–94; CLS 0 everywhere.** Perf fixes: reveal
+  animation transform-only (an `opacity:0` LCP candidate was excluding the hero/prose from LCP →
+  late footer LCP, the biggest drag); dropped Newsreader italic; `.browserslistrc` (modern
+  evergreen) dropped ~11 KiB legacy JS, cutting post-page TBT ~230→~30–70ms. **Residual <95 on
+  content pages = web-font LCP (~3.0s) under 4×-CPU + slow-4G lab throttle** (real-world unthrottled
+  LCP ~1s); next/font emits no preload for variable-only usage. **Follow-up to fully clear ≥95 on
+  content pages:** preload the LCP font (apply the Newsreader font `className` to the hero/prose
+  LCP elements, or self-host via `localFont` with explicit `preload`).
 - **Increment 3b — select/table/dropdown → §5: DONE** (2026-06-28). Select trigger conformed to the
   Input spec (h40, radius-sm, surface bg, focus offset 1px, text-subtle placeholder); Table `thead`
   gets the `--surface-2` fill + mono-eyebrow column labels; Dropdown/Select section labels use the
