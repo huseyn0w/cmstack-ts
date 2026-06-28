@@ -288,7 +288,7 @@ function Sidebar({
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5" aria-label="Admin navigation">
         {navGroups.map((group) => (
           <div key={group.heading}>
-            <p className="px-3 mb-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase text-muted-foreground">
+            <p className="px-3 mb-1.5 font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted-foreground">
               {group.heading}
             </p>
             <ul className="space-y-0.5">
@@ -343,8 +343,16 @@ export function AdminShell({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Skip to content — first in tab order (WCAG 2.1 AA). */}
+      <a
+        href="#admin-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+      >
+        Skip to content
+      </a>
+
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-60 shrink-0 border-r border-border bg-card">
+      <aside className="hidden lg:flex flex-col w-[260px] shrink-0 border-r border-border bg-card">
         <Sidebar
           user={user}
           canManageUsers={canManageUsers}
@@ -455,7 +463,9 @@ export function AdminShell({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main id="admin-main" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-none">
+          {children}
+        </main>
       </div>
     </div>
   );
