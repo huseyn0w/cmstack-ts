@@ -8,7 +8,7 @@ export const editorialTheme: Theme = {
   meta: {
     id: 'editorial',
     label: 'Editorial',
-    description: 'Dark, restrained, typography-led. The default Cmstack-TS look.',
+    description: 'Light, warm paper, typography-led quiet luxury. The default Cmstack-TS look.',
   },
   Layout: EditorialLayout,
   Home: EditorialHome,

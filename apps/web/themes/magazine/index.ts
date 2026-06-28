@@ -8,7 +8,7 @@ export const magazineTheme: Theme = {
   meta: {
     id: 'magazine',
     label: 'Magazine',
-    description: 'Light, serif, masthead-led. A print-newspaper feel.',
+    description: 'Dark, serif, masthead-led. A nocturnal print-newspaper feel.',
   },
   Layout: MagazineLayout,
   Home: MagazineHome,
