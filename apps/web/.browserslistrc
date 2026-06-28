@@ -1,0 +1,7 @@
+# Modern evergreen targets — lets SWC drop legacy polyfills/transpilation from
+# the client bundle (Lighthouse "legacy JavaScript"). Covers all browsers that
+# support native ES modules + the features Next 15 / React 19 rely on.
+chrome >= 111
+firefox >= 111
+safari >= 16.4
+edge >= 111

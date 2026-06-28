@@ -20,7 +20,6 @@ const newsreader = Newsreader({
   subsets: ['latin'],
   variable: '--font-newsreader',
   display: 'swap',
-  style: ['normal', 'italic'],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -52,7 +51,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={`${inter.variable} ${newsreader.variable} ${GeistMono.variable}`}>
+      <body
+        className={`${inter.variable} ${newsreader.variable} ${GeistMono.variable} ${inter.className}`}
+      >
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>
