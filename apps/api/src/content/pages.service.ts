@@ -242,6 +242,7 @@ export class PagesService {
       slug: page.slug,
       content: page.content,
       status: page.status,
+      scheduledAt: page.scheduledAt?.toISOString() ?? null,
       metaTitle: page.metaTitle,
       metaDescription: page.metaDescription,
       canonicalUrl: page.canonicalUrl,

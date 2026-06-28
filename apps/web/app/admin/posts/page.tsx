@@ -9,15 +9,20 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { apiGet } from '@/lib/admin/api';
-import { postListSchema } from '@cmstack-ts/config';
+import { postListSchema, scheduleLabel } from '@cmstack-ts/config';
 import type { PostList, PostSummary } from '@cmstack-ts/config';
 import Link from 'next/link';
 import { PostRowActions } from './post-row-actions';
 
 export const dynamic = 'force-dynamic';
 
-function statusBadgeVariant(status: string): 'success' | 'muted' {
-  return status === 'PUBLISHED' ? 'success' : 'muted';
+function badgeFor(label: 'scheduled' | 'published' | 'draft'): {
+  variant: 'success' | 'muted' | 'outline';
+  text: string;
+} {
+  if (label === 'published') return { variant: 'success', text: 'Published' };
+  if (label === 'scheduled') return { variant: 'outline', text: 'Scheduled' };
+  return { variant: 'muted', text: 'Draft' };
 }
 
 function formatDate(iso: string): string {
@@ -95,9 +100,10 @@ function PostsTable({ posts, isTrash }: { posts: PostSummary[]; isTrash: boolean
               </div>
             </TableCell>
             <TableCell>
-              <Badge variant={statusBadgeVariant(post.status)}>
-                {post.status === 'PUBLISHED' ? 'Published' : 'Draft'}
-              </Badge>
+              {(() => {
+                const badge = badgeFor(scheduleLabel(post.status, post.scheduledAt, new Date()));
+                return <Badge variant={badge.variant}>{badge.text}</Badge>;
+              })()}
             </TableCell>
             <TableCell>
               <div className="flex flex-wrap gap-1">

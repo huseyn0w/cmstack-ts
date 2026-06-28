@@ -389,6 +389,7 @@ export class PostsService {
       excerpt: post.excerpt,
       status: post.status,
       publishedAt: post.publishedAt?.toISOString() ?? null,
+      scheduledAt: post.scheduledAt?.toISOString() ?? null,
       noindex: post.noindex,
       author: post.author
         ? { id: post.author.id, name: post.author.name, image: post.author.image }

@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { fromDateTimeLocalValue, toDateTimeLocalValue } from '@/lib/admin/schedule';
 import { cn } from '@/lib/utils';
 import type { CategoryView, TagView } from '@/types/content';
 import type { PostDetail } from '@cmstack-ts/config';
@@ -49,6 +50,7 @@ interface PostFormProps {
     metaDescription?: string;
     canonicalUrl?: string;
     noindex?: boolean;
+    scheduledAt?: string | null;
     categoryIds?: string[];
     tagIds?: string[];
   }) => Promise<CreateResult>;
@@ -64,6 +66,7 @@ interface PostFormProps {
       metaDescription?: string;
       canonicalUrl?: string;
       noindex?: boolean;
+      scheduledAt?: string | null;
       categoryIds?: string[];
       tagIds?: string[];
     },
@@ -94,6 +97,7 @@ export function PostForm({ categories, tags, post, createAction, updateAction }:
   const [metaDescription, setMetaDescription] = useState(post?.metaDescription ?? '');
   const [canonicalUrl, setCanonicalUrl] = useState(post?.canonicalUrl ?? '');
   const [noindex, setNoindex] = useState(post?.noindex ?? false);
+  const [scheduledAt, setScheduledAt] = useState(toDateTimeLocalValue(post?.scheduledAt));
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
     post?.categories.map((c) => c.id) ?? [],
   );
@@ -131,6 +135,7 @@ export function PostForm({ categories, tags, post, createAction, updateAction }:
       metaDescription: metaDescription.trim() || undefined,
       canonicalUrl: canonicalUrl.trim() || undefined,
       noindex,
+      scheduledAt: fromDateTimeLocalValue(scheduledAt),
       categoryIds: selectedCategoryIds,
       tagIds: selectedTagIds,
     };
@@ -308,6 +313,23 @@ export function PostForm({ categories, tags, post, createAction, updateAction }:
                 <SelectItem value="PUBLISHED">Published</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Schedule */}
+          <div className="space-y-1.5">
+            <Label htmlFor="post-scheduled-at">
+              Schedule publish at{' '}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="post-scheduled-at"
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave a draft with a future time to auto-publish then.
+            </p>
           </div>
 
           {/* Categories */}

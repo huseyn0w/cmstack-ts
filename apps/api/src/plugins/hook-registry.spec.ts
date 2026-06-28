@@ -11,6 +11,7 @@ function makePost(content: string): PostDetail {
     excerpt: null,
     status: 'PUBLISHED',
     publishedAt: null,
+    scheduledAt: null,
     noindex: false,
     metaTitle: null,
     metaDescription: null,

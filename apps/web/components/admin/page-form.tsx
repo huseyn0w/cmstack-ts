@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { fromDateTimeLocalValue, toDateTimeLocalValue } from '@/lib/admin/schedule';
 import type { PageDetail } from '@cmstack-ts/config';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -44,6 +45,7 @@ interface PageFormProps {
     metaDescription?: string;
     canonicalUrl?: string;
     noindex?: boolean;
+    scheduledAt?: string | null;
   }) => Promise<CreateResult>;
   updateAction?: (
     id: string,
@@ -56,6 +58,7 @@ interface PageFormProps {
       metaDescription?: string;
       canonicalUrl?: string;
       noindex?: boolean;
+      scheduledAt?: string | null;
     },
   ) => Promise<UpdateResult>;
 }
@@ -83,6 +86,7 @@ export function PageForm({ page, createAction, updateAction }: PageFormProps) {
   const [metaDescription, setMetaDescription] = useState(page?.metaDescription ?? '');
   const [canonicalUrl, setCanonicalUrl] = useState(page?.canonicalUrl ?? '');
   const [noindex, setNoindex] = useState(page?.noindex ?? false);
+  const [scheduledAt, setScheduledAt] = useState(toDateTimeLocalValue(page?.scheduledAt));
 
   const handleTitleChange = useCallback(
     (val: string) => {
@@ -105,6 +109,7 @@ export function PageForm({ page, createAction, updateAction }: PageFormProps) {
       metaDescription: metaDescription.trim() || undefined,
       canonicalUrl: canonicalUrl.trim() || undefined,
       noindex,
+      scheduledAt: fromDateTimeLocalValue(scheduledAt),
     };
 
     startTransition(async () => {
@@ -264,6 +269,23 @@ export function PageForm({ page, createAction, updateAction }: PageFormProps) {
                 <SelectItem value="PUBLISHED">Published</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Schedule */}
+          <div className="space-y-1.5">
+            <Label htmlFor="page-scheduled-at">
+              Schedule publish at{' '}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="page-scheduled-at"
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave a draft with a future time to auto-publish then.
+            </p>
           </div>
         </div>
       </div>

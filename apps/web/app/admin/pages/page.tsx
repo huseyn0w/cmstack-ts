@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { apiGet } from '@/lib/admin/api';
-import { pageDetailSchema } from '@cmstack-ts/config';
+import { pageDetailSchema, scheduleLabel } from '@cmstack-ts/config';
 import type { PageDetail } from '@cmstack-ts/config';
 import Link from 'next/link';
 import { z } from 'zod';
@@ -19,8 +19,13 @@ export const dynamic = 'force-dynamic';
 
 const pageListSchema = z.array(pageDetailSchema);
 
-function statusBadgeVariant(status: string): 'success' | 'muted' {
-  return status === 'PUBLISHED' ? 'success' : 'muted';
+function badgeFor(label: 'scheduled' | 'published' | 'draft'): {
+  variant: 'success' | 'muted' | 'outline';
+  text: string;
+} {
+  if (label === 'published') return { variant: 'success', text: 'Published' };
+  if (label === 'scheduled') return { variant: 'outline', text: 'Scheduled' };
+  return { variant: 'muted', text: 'Draft' };
 }
 
 function formatDate(iso: string): string {
@@ -142,9 +147,12 @@ export default async function PagesPage({ searchParams }: PagesPageProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={statusBadgeVariant(page.status)}>
-                      {page.status === 'PUBLISHED' ? 'Published' : 'Draft'}
-                    </Badge>
+                    {(() => {
+                      const badge = badgeFor(
+                        scheduleLabel(page.status, page.scheduledAt, new Date()),
+                      );
+                      return <Badge variant={badge.variant}>{badge.text}</Badge>;
+                    })()}
                   </TableCell>
                   <TableCell>
                     <time
