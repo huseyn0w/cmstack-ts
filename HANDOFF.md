@@ -1,7 +1,7 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-26 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#10 done + shared net-new: revision-restore UI done).** · **Branch:** `refactor/repository-layer` (off `main`)
-**Next phases:** Task 1 shared net-new continuing — next is **scheduled publishing** (then RSS/Atom, comment-notification email). Task 3 (UI), Task 5 (README) not started.
+**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#10 done + shared net-new: revision-restore UI + scheduled publishing done).** · **Branch:** `refactor/repository-layer` (off `main`)
+**Next phases:** Task 1 shared net-new continuing — next is **RSS/Atom feeds** (then comment-notification email). Task 3 (UI), Task 5 (README) not started.
 
 ## Task 1 progress (feature parity, `REFACTOR_PLAN.md` §7 — strict order per operator)
 - **E2E baseline re-run (pre-Task-1):** full stack up (docker db + built api + built web),
@@ -269,10 +269,37 @@
   - **Scoped out (logged):** taxonomy/translation restore (not in the snapshot — by design); rich
     visual text diff (field-level compare chosen); revision pruning/retention; per-revision
     preview route.
-- **Next shared net-new:** **scheduled publishing** (publish a post/page at a future time — needs
-  a `scheduledAt`/status transition + a scheduler tick; observer: emits `post.published` when the
-  scheduled transition fires). Then RSS/Atom feeds, comment-notification email (next `HookRegistry`
-  consumer after `contact.submitted`).
+- **Shared net-new #2 — Scheduled publishing: DONE** (2026-06-28). Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-06-28-scheduled-publishing.*`. Canon `../FEATURE_MATRIX.md`
+  row 26 (gap in all three stacks). **Status model:** `DRAFT` + a new `scheduledAt DateTime?` (enum
+  untouched) — a future-dated DRAFT is "scheduled" and stays a **hidden DRAFT** until the worker
+  publishes it, so public reads / CASL / filters are unchanged. Additive migration
+  `20260628082341_scheduled_publishing` (two nullable columns + `@@index([status, scheduledAt])` on
+  Post + Page). **New dep `@nestjs/schedule`**; `ScheduleModule.forRoot()` in AppModule + a thin
+  `ContentSchedulerService` `@Interval(60_000)` → `Posts/PagesService.publishDue(now)`. `publishDue`
+  finds due drafts via `repo.findDueScheduledIds(now)` (`status=DRAFT, deletedAt=null,
+  scheduledAt<=now`) and calls `publishScheduled(id)` per row: **race-safe** (no-op if no longer a
+  scheduled draft), goes through **`repo.update` directly** (no revision snapshot for an automated
+  flip), stamps `publishedAt` if null (posts only — pages have no `publishedAt`), clears
+  `scheduledAt`, and emits **`post.published`** (posts) + **`content.changed`** (both → §7 #10 cache
+  invalidates). `create`/`update` store `scheduledAt` (ISO→Date) and **force it null on a manual
+  PUBLISHED**. Config: `scheduledAt` on create/update schemas + pure `scheduleLabel(status,
+  scheduledAt, now)`; `scheduledAt` surfaced on `postSummarySchema`/`pageDetailSchema`. Web: a
+  `datetime-local` "Schedule publish at" field on the post + page forms (pure
+  `lib/admin/schedule.ts` ISO↔local helpers) + a **Scheduled** list badge. **495 tests,
+  typecheck/lint clean, coverage 90.31% (gate ≥80%), e2e 11/11**; live-verified (a DRAFT with a
+  ~1-min-past `scheduledAt` returns 404 publicly, then within one ≤60s tick the scheduler logs
+  "Auto-published 1 scheduled item(s)", the post flips to PUBLISHED with `publishedAt` set +
+  `scheduledAt` cleared, and the public read returns 200). Adversarial self-review: 0 HIGH/MED
+  (hidden-until-publish, race no-op, manual-publish clears schedule, publishedAt-once,
+  fault-isolated interval, `{lte}` excludes null-scheduledAt drafts all checked).
+  - **Scoped out (logged):** revision snapshot on auto-publish; distributed worker lock for
+    multi-instance deploys (single-process today); scheduled unpublish/expiry; timezone modeling
+    beyond ISO/UTC.
+- **Next shared net-new:** **RSS/Atom feeds** (a public feed of published posts — additive read
+  route, no migration; likely a pure builder like the sitemap/llms.txt under `apps/web/lib/seo` or a
+  feed route). Then comment-notification email (next `HookRegistry` consumer after
+  `contact.submitted`).
 
 ---
 
@@ -441,25 +468,27 @@ pnpm e2e                                                  # 11/11 (web-alone; li
 ## Continuation prompt (paste into a fresh window)
 > You are continuing the `cmstack-ts` engagement (senior TS engineer, autonomous).
 > Working dir `/Users/huseyn0w/Desktop/SWE/cmstack/cmstack-ts`, branch
-> `refactor/repository-layer` (clean tree, all committed; **475 tests, typecheck + biome
-> clean, coverage gate ≥80% (actual 90.24%)**). **DONE:** Task 2 (repository-layer refactor) + Task 4
+> `refactor/repository-layer` (clean tree, all committed; **495 tests, typecheck + biome
+> clean, coverage gate ≥80% (actual 90.31%)**). **DONE:** Task 2 (repository-layer refactor) + Task 4
 > (tests); the E2E baseline re-run (11/11, refactor confirmed black-box-invariant); and
 > **Task 1 §7 items #1 (per-locale content translation), #2 (per-content SEO meta), #3
 > (password reset + transactional email), #4 (menu management), #5 (contact form + email),
 > #6 (GA4/GTM + site verification + basic consent), #7 (auto thumbnails / image processing),
 > #8 (dashboard translation editing UI), #9 (plugin admin UI + runtime toggle + render regions),
 > #10 (caching layer — Redis/memory, event-driven invalidation via `HookRegistry`)** —
-> all live-verified. **The §7 register is now fully ticked**, and the **first shared net-new —
-> revision-restore UI** — is also done (restore reuses `update` → reversible + sanitized +
-> cache-invalidating; field-level compare panel on the post/page edit pages). **Read first:**
+> all live-verified. **The §7 register is now fully ticked**, and **two shared net-new items are
+> done: revision-restore UI** (restore reuses `update` → reversible + sanitized + cache-invalidating;
+> field-level compare panel) **and scheduled publishing** (`scheduledAt` on a DRAFT + a
+> `@nestjs/schedule` minute-interval worker auto-publishes due drafts via `publishDue`; emits
+> `post.published` + `content.changed`). **Read first:**
 > `cmstack-ts/HANDOFF.md` (the Task-1 progress section + "Full stack for LIVE verification"
 > recipe + Gotchas), `cmstack-ts/REFACTOR_PLAN.md` (§2.0 layering, §2.7 observer policy,
 > §7 feature register with #1–#10 checked, §10 invariants), `cmstack-ts/CLAUDE.md`, and the
 > read-only canon `../FEATURE_MATRIX.md` + `../DESIGN_SYSTEM.md` (do NOT edit the canon).
 > The design+plan docs for finished items are in `docs/superpowers/{specs,plans}/`.
 >
-> **Resume with the Task 1 shared net-new** (operator directive) — revision-restore UI is DONE;
-> next is **scheduled publishing**, then RSS/Atom feeds, comment-notification email. Then Task 3 (UI §8) +
+> **Resume with the Task 1 shared net-new** (operator directive) — revision-restore UI + scheduled
+> publishing are DONE; next is **RSS/Atom feeds**, then comment-notification email. Then Task 3 (UI §8) +
 > Task 5 (full README rewrite). **Observer note:** §7 #5 wired the first real side effect
 > (`contact.submitted` → mail listener); §7 #10 added four cache-invalidation events
 > (`content.changed`/`settings.theme.changed`/`menu.changed`/`seo.changed`); the

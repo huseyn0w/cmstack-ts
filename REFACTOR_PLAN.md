@@ -595,9 +595,24 @@ From `../FEATURE_MATRIX.md` ("cmstack-ts needs"); nothing to be silently dropped
       memory fallback banner without `REDIS_URL`). Adversarial self-review: 0 HIGH/MED.
       Out of scope (logged): caching search/authors/comments/likes; per-namespace TTLs; single-flight/
       stampede locks; HTTP response caching; web/Next caching beyond `revalidatePath`.
-- [ ] Shared net-new: ~~revision-restore UI~~ (**DONE** 2026-06-26), **scheduled publishing**,
-      **RSS/Atom feeds**, **comment-notification email** (attaches to `HookRegistry`),
+- [ ] Shared net-new: ~~revision-restore UI~~ (**DONE** 2026-06-26),
+      ~~scheduled publishing~~ (**DONE** 2026-06-28), **RSS/Atom feeds**,
+      **comment-notification email** (attaches to `HookRegistry`),
       **coverage reporting** (folded into Task 4).
+      - **Scheduled publishing — DONE** (2026-06-28): additive migration adds `scheduledAt DateTime?`
+        + `@@index([status, scheduledAt])` on Post + Page (enum untouched → a scheduled item is a
+        hidden DRAFT). New dep **`@nestjs/schedule`**; `ScheduleModule.forRoot()` + a thin
+        `ContentSchedulerService` `@Interval(60s)` calls `Posts/PagesService.publishDue(now)`, which
+        find due drafts (`findDueScheduledIds`) and publish each via `publishScheduled` — race-safe
+        (no-op if no longer a scheduled draft), through `repo.update` directly (no revision snapshot),
+        stamping `publishedAt` (posts) + clearing `scheduledAt`, emitting `post.published` (posts) +
+        `content.changed`. `create`/`update` store `scheduledAt` and clear it on a manual PUBLISHED.
+        Config: `scheduledAt` on create/update schemas + pure `scheduleLabel`; web datetime-local
+        field on the post/page forms + a **Scheduled** list badge. **495 tests, typecheck/lint clean,
+        coverage 90.31%, e2e 11/11**; live-verified (a DRAFT with a past `scheduledAt` is hidden, then
+        auto-publishes within one tick — `publishedAt` set, `scheduledAt` cleared, visible publicly).
+        Out of scope: revision snapshot on auto-publish; distributed worker lock (single-process);
+        scheduled unpublish/expiry.
       - **Revision restore UI — DONE** (2026-06-26): `RevisionRepository.findById` →
         `Posts/PagesService.restoreRevision(id, revisionId, authorId)` which **reuses `update`**
         (snapshots current state first → reversible; re-sanitizes content; emits `content.changed`
