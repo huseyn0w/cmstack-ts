@@ -17,10 +17,10 @@ export const SelectTrigger = forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input',
-      'bg-transparent px-3 py-1 text-sm text-foreground',
-      'placeholder:text-muted-foreground',
-      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0 focus:border-ring',
+      'flex h-10 w-full items-center justify-between gap-2 rounded-sm border border-input',
+      'bg-surface px-3 py-1 text-sm text-foreground',
+      'placeholder:text-text-subtle',
+      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background focus:border-ring',
       'disabled:cursor-not-allowed disabled:opacity-50',
       'transition-colors duration-150',
       '[&>span]:line-clamp-1',
@@ -105,7 +105,7 @@ export const SelectLabel = forwardRef<
   <SelectPrimitive.Label
     ref={ref}
     className={cn(
-      'px-2 py-1.5 text-xs font-medium text-muted-foreground tracking-wide uppercase',
+      'px-2 py-1.5 font-mono text-xs font-medium text-muted-foreground tracking-wide uppercase',
       className,
     )}
     {...props}

@@ -10,7 +10,7 @@ export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>)
 }
 
 export function TableHeader({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn('border-b border-border', className)} {...props} />;
+  return <thead className={cn('border-b border-border bg-surface-2', className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
@@ -28,7 +28,7 @@ export function TableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCel
     <th
       className={cn(
         'h-10 px-4 text-left align-middle',
-        'text-xs font-medium tracking-wide text-muted-foreground uppercase',
+        'font-mono text-xs font-medium tracking-wide text-muted-foreground uppercase',
         '[&:has([role=checkbox])]:pr-0',
         className,
       )}
