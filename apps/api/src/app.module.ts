@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AccountsModule } from './auth/accounts.module';
 import { CommentsModule } from './comments/comments.module';
@@ -18,6 +19,8 @@ import { SpamModule } from './spam/spam.module';
     // Rate-limiting config; ThrottlerGuard is applied per-route on the
     // spam-sensitive endpoints (auth + comment submission).
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    // Enables @Interval/@Cron workers (e.g. the scheduled-publishing scheduler).
+    ScheduleModule.forRoot(),
     PrismaModule,
     HealthModule,
     AccountsModule,

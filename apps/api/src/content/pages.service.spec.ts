@@ -215,7 +215,10 @@ describe('PagesService', () => {
 
   it('create stores scheduledAt for a draft', async () => {
     pages.create.mockResolvedValue(pageRow());
-    await service.create({ title: 'A', content: '', scheduledAt: '2026-07-01T09:00:00.000Z' }, 'u1');
+    await service.create(
+      { title: 'A', content: '', scheduledAt: '2026-07-01T09:00:00.000Z' },
+      'u1',
+    );
     expect(pages.create.mock.calls[0]?.[0].scheduledAt).toEqual(
       new Date('2026-07-01T09:00:00.000Z'),
     );

@@ -49,7 +49,11 @@ export class PagesService {
       content: this.sanitizer.sanitize(input.content ?? ''),
       status: input.status ?? 'DRAFT',
       scheduledAt:
-        input.status === 'PUBLISHED' ? null : input.scheduledAt ? new Date(input.scheduledAt) : null,
+        input.status === 'PUBLISHED'
+          ? null
+          : input.scheduledAt
+            ? new Date(input.scheduledAt)
+            : null,
       metaTitle: input.metaTitle ?? null,
       metaDescription: input.metaDescription ?? null,
       canonicalUrl: input.canonicalUrl ?? null,

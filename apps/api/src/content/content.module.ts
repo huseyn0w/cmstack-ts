@@ -24,6 +24,7 @@ import { PluginsModule } from '../plugins/plugins.module';
 import { AuthorsService } from './authors.service';
 import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
+import { ContentSchedulerService } from './content-scheduler.service';
 import { HtmlSanitizerService } from './html-sanitizer.service';
 import { LikesController, PublicLikesController } from './likes.controller';
 import { LikesService } from './likes.service';
@@ -64,6 +65,7 @@ import { TagsService } from './tags.service';
     SearchService,
     AuthorsService,
     LikesService,
+    ContentSchedulerService,
     provideRepository(TAG_REPOSITORY, PrismaTagRepository),
     provideRepository(CATEGORY_REPOSITORY, PrismaCategoryRepository),
     provideRepository(POST_REPOSITORY, PrismaPostRepository),

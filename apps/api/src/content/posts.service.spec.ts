@@ -386,7 +386,10 @@ describe('PostsService.restoreRevision', () => {
 describe('PostsService scheduled publishing', () => {
   it('create stores scheduledAt for a draft', async () => {
     posts.create.mockResolvedValue(postRow());
-    await service.create({ title: 'T', content: '', scheduledAt: '2026-07-01T09:00:00.000Z' }, 'u1');
+    await service.create(
+      { title: 'T', content: '', scheduledAt: '2026-07-01T09:00:00.000Z' },
+      'u1',
+    );
     expect(posts.create.mock.calls[0]?.[0].scheduledAt).toEqual(
       new Date('2026-07-01T09:00:00.000Z'),
     );
@@ -403,7 +406,11 @@ describe('PostsService scheduled publishing', () => {
 
   it('publishScheduled publishes a due draft and emits both events', async () => {
     posts.findActiveById.mockResolvedValue(
-      postRow({ status: 'DRAFT', publishedAt: null, scheduledAt: new Date('2026-06-28T11:00:00Z') }),
+      postRow({
+        status: 'DRAFT',
+        publishedAt: null,
+        scheduledAt: new Date('2026-06-28T11:00:00Z'),
+      }),
     );
     posts.update.mockResolvedValue(postRow({ status: 'PUBLISHED', slug: 'title' }));
     await service.publishScheduled('p1');
@@ -411,7 +418,10 @@ describe('PostsService scheduled publishing', () => {
     expect(data.status).toBe('PUBLISHED');
     expect(data.scheduledAt).toBeNull();
     expect(data.publishedAt).toBeInstanceOf(Date);
-    expect(hooks.emit).toHaveBeenCalledWith('post.published', expect.objectContaining({ id: 'p1' }));
+    expect(hooks.emit).toHaveBeenCalledWith(
+      'post.published',
+      expect.objectContaining({ id: 'p1' }),
+    );
     expect(hooks.emit).toHaveBeenCalledWith(
       'content.changed',
       expect.objectContaining({ type: 'post' }),
@@ -427,7 +437,11 @@ describe('PostsService scheduled publishing', () => {
   it('publishDue publishes every due id', async () => {
     posts.findDueScheduledIds.mockResolvedValue([{ id: 'p1' }, { id: 'p2' }]);
     posts.findActiveById.mockResolvedValue(
-      postRow({ status: 'DRAFT', publishedAt: null, scheduledAt: new Date('2026-06-28T11:00:00Z') }),
+      postRow({
+        status: 'DRAFT',
+        publishedAt: null,
+        scheduledAt: new Date('2026-06-28T11:00:00Z'),
+      }),
     );
     posts.update.mockResolvedValue(postRow({ status: 'PUBLISHED' }));
     const count = await service.publishDue(new Date('2026-06-28T12:00:00Z'));
