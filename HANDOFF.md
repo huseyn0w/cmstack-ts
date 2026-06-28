@@ -8,16 +8,32 @@
 Cross-checked against the canon `../FEATURE_MATRIX.md` AND the real code (the matrix was a
 stale pre-Task-1 snapshot; almost all its `ts` ❌/⚠️ are now DONE). These are the genuine
 remaining gaps vs the richest sibling (laravel). **Suggested order (highest value first):**
-1. **Media picker inside the rich-text editor** — a toolbar "insert image" button that opens
-   the media library (Modal) and inserts `<img src alt>` into Tiptap. Today the editor
-   (`apps/web/components/admin/rich-text-editor.tsx`) is Bold/H2/H3/Link only — no image
-   insert. Spec: `DESIGN_SYSTEM.md` §5 Rich-text editor (media-insert button). Web-only (the
-   API already sanitizes + the media list endpoint exists); no migration.
-2. **Bulk admin list actions** — multi-select (leading checkbox column + select-all) + a
-   bulk-action bar (delete/restore/publish) on the admin tables (posts/pages/categories/
-   comments/users). Spec: `DESIGN_SYSTEM.md` §5 Tables (bulk-action bar, `aria-live`). Likely
-   needs batch endpoints on the services (loop existing single-item ops, or add a batch repo
-   method) + the UI. This is also where the canon **Tables bulk bar** component lands.
+1. **Media picker inside the rich-text editor — DONE** (2026-06-29, `1d8c2fa`). Toolbar
+   "Insert image" button on the Tiptap editor opens a media-library picker (`Dialog`) and
+   inserts a block `<img src alt>` via `@tiptap/extension-image`. Web-only, no migration: the
+   API sanitizer already keeps `<img>` (http/https only, `data:` stripped) and `/media` exists.
+   `MediaPickerDialog` (image-only grid via a `listMediaForPicker` server action + per-pick alt
+   field defaulting to the media alt/title); pure `lib/admin/media-insert.ts` helpers unit-tested
+   (6 tests). No `class` on `<img>` (sanitizer drops it). **525 tests, typecheck/lint clean;
+   live-verified** end-to-end (legit `<img src alt>` survives the round-trip + renders on the
+   public page; a `data:svg+<script>` src is stripped to `<img />`).
+2. **Bulk admin list actions — DONE for posts/pages/comments** (2026-06-29). Leading checkbox
+   column + tri-state select-all + a sticky **`BulkBar`** (canon §5, `aria-live` count, confirm
+   dialog for destructive actions) on the posts, pages, and comments tables. **Web-only fan-out,
+   no new API surface:** a `runBulk` server helper loops the *existing* single-item endpoints via
+   `Promise.allSettled`, so every per-item CASL gate, observer event, and cache invalidation is
+   reused and partial failures are isolated. Posts/pages: publish/unpublish/trash + restore/
+   permanent-delete in trash; comments: approve/spam/delete. Reusable primitives:
+   `components/ui/checkbox.tsx` (tri-state), `components/admin/bulk-selection.tsx`
+   (`useRowSelection` + checkboxes), `components/admin/bulk-bar.tsx`, pure `lib/admin/bulk.ts`
+   (summarize/message/selection maths, **8 unit tests**) + server-only `lib/admin/run-bulk.ts`.
+   **533 tests, typecheck/lint clean; live-verified** the fan-out against the real API (2 valid
+   ids publish 200, a bogus id 404 is isolated, others still succeed; trash+permanent cleanup 204;
+   admin routes compile → 307).
+   - **Scoped out (logged, fast-follow):** categories/tags (bulk-delete — trivial with the same
+     primitives) and users (bulk-delete — deferred: self-deletion guard + low row counts make
+     single-delete sufficient for now). No batch *repo* method added (the fan-out reuses
+     single-item ops); a true batch endpoint is only worth it if a list grows past ~50 rows/page.
 3. **Related posts** — a "Related posts" block on the post detail (by shared taxonomy).
    Public read; add a `PostRepository.findRelated(postId, categoryIds/tagIds, limit)` +
    surface it on `/blog/[slug]` through the theme. No migration.

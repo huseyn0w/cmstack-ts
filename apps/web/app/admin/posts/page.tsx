@@ -1,37 +1,11 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { apiGet } from '@/lib/admin/api';
-import { postListSchema, scheduleLabel } from '@cmstack-ts/config';
-import type { PostList, PostSummary } from '@cmstack-ts/config';
+import { postListSchema } from '@cmstack-ts/config';
+import type { PostList } from '@cmstack-ts/config';
 import Link from 'next/link';
-import { PostRowActions } from './post-row-actions';
+import { PostsBulkTable } from './posts-bulk-table';
 
 export const dynamic = 'force-dynamic';
-
-function badgeFor(label: 'scheduled' | 'published' | 'draft'): {
-  variant: 'success' | 'muted' | 'outline';
-  text: string;
-} {
-  if (label === 'published') return { variant: 'success', text: 'Published' };
-  if (label === 'scheduled') return { variant: 'outline', text: 'Scheduled' };
-  return { variant: 'muted', text: 'Draft' };
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 async function fetchPosts(params: {
   status?: string;
@@ -73,66 +47,6 @@ function EmptyState({ tab, showNewPost }: { tab: Tab; showNewPost: boolean }) {
         </Link>
       )}
     </div>
-  );
-}
-
-function PostsTable({ posts, isTrash }: { posts: PostSummary[]; isTrash: boolean }) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Title</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Categories</TableHead>
-          <TableHead>Updated</TableHead>
-          <TableHead className="w-12 text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {posts.map((post) => (
-          <TableRow key={post.id}>
-            <TableCell>
-              <div className="min-w-0">
-                <p className="font-medium text-foreground truncate max-w-xs">{post.title}</p>
-                <p className="font-mono text-xs text-muted-foreground mt-0.5 truncate max-w-xs">
-                  /{post.slug}
-                </p>
-              </div>
-            </TableCell>
-            <TableCell>
-              {(() => {
-                const badge = badgeFor(scheduleLabel(post.status, post.scheduledAt, new Date()));
-                return <Badge variant={badge.variant}>{badge.text}</Badge>;
-              })()}
-            </TableCell>
-            <TableCell>
-              <div className="flex flex-wrap gap-1">
-                {post.categories.length > 0 ? (
-                  post.categories.map((cat) => (
-                    <Badge key={cat.id} variant="outline" className="text-xs">
-                      {cat.name}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
-                )}
-              </div>
-            </TableCell>
-            <TableCell>
-              <time
-                dateTime={post.updatedAt}
-                className="font-mono text-xs text-muted-foreground tabular-nums"
-              >
-                {formatDate(post.updatedAt)}
-              </time>
-            </TableCell>
-            <TableCell className="text-right">
-              <PostRowActions post={post} isTrash={isTrash} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
   );
 }
 
@@ -199,9 +113,7 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
       ) : posts.length === 0 ? (
         <EmptyState tab={activeTab} showNewPost={!isTrash} />
       ) : (
-        <div className="border border-border rounded-lg bg-card overflow-hidden">
-          <PostsTable posts={posts} isTrash={isTrash} />
-        </div>
+        <PostsBulkTable posts={posts} isTrash={isTrash} />
       )}
     </div>
   );

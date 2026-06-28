@@ -1,6 +1,8 @@
 'use server';
 
 import { apiSend } from '@/lib/admin/api';
+import { type BulkSummary, summarizeBulk } from '@/lib/admin/bulk';
+import { runBulk } from '@/lib/admin/run-bulk';
 import {
   type CreatePageInput,
   type UpdatePageInput,
@@ -11,6 +13,27 @@ import { revalidatePath } from 'next/cache';
 type ActionResult<T = undefined> = T extends undefined
   ? { ok: true } | { ok: false; error: string }
   : { ok: true; data: T } | { ok: false; error: string };
+
+export type BulkPageAction = 'publish' | 'unpublish' | 'trash' | 'restore' | 'permanent';
+
+/** Apply one action to many pages by looping the single-item endpoints. */
+export async function bulkPagesAction(
+  ids: string[],
+  action: BulkPageAction,
+): Promise<ActionResult<BulkSummary>> {
+  if (ids.length === 0) return { ok: false, error: 'No pages selected.' };
+  const runners: Record<BulkPageAction, (id: string) => Promise<unknown>> = {
+    publish: (id) => apiSend('PATCH', `/pages/${id}`, { status: 'PUBLISHED' }),
+    unpublish: (id) => apiSend('PATCH', `/pages/${id}`, { status: 'DRAFT' }),
+    trash: (id) => apiSend('DELETE', `/pages/${id}`),
+    restore: (id) => apiSend('POST', `/pages/${id}/restore`),
+    permanent: (id) => apiSend('DELETE', `/pages/${id}/permanent`),
+  };
+  const results = await runBulk(ids, runners[action]);
+  revalidatePath('/admin/pages');
+  revalidatePath('/', 'layout');
+  return { ok: true, data: summarizeBulk(results) };
+}
 
 export async function createPageAction(
   input: CreatePageInput,

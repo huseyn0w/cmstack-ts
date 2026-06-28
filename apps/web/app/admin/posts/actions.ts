@@ -1,6 +1,8 @@
 'use server';
 
 import { apiSend } from '@/lib/admin/api';
+import { type BulkSummary, summarizeBulk } from '@/lib/admin/bulk';
+import { runBulk } from '@/lib/admin/run-bulk';
 import {
   type CreatePostInput,
   type UpdatePostInput,
@@ -94,6 +96,27 @@ export async function togglePostStatusAction(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Failed to update status' };
   }
+}
+
+export type BulkPostAction = 'publish' | 'unpublish' | 'trash' | 'restore' | 'permanent';
+
+/** Apply one action to many posts by looping the single-item endpoints. */
+export async function bulkPostsAction(
+  ids: string[],
+  action: BulkPostAction,
+): Promise<ActionResult<BulkSummary>> {
+  if (ids.length === 0) return { ok: false, error: 'No posts selected.' };
+  const runners: Record<BulkPostAction, (id: string) => Promise<unknown>> = {
+    publish: (id) => apiSend('PATCH', `/posts/${id}`, { status: 'PUBLISHED' }),
+    unpublish: (id) => apiSend('PATCH', `/posts/${id}`, { status: 'DRAFT' }),
+    trash: (id) => apiSend('DELETE', `/posts/${id}`),
+    restore: (id) => apiSend('POST', `/posts/${id}/restore`),
+    permanent: (id) => apiSend('DELETE', `/posts/${id}/permanent`),
+  };
+  const results = await runBulk(ids, runners[action]);
+  revalidatePath('/admin/posts');
+  revalidatePath('/', 'layout');
+  return { ok: true, data: summarizeBulk(results) };
 }
 
 export async function upsertPostTranslationAction(

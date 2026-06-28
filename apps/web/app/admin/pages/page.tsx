@@ -1,40 +1,14 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { apiGet } from '@/lib/admin/api';
-import { pageDetailSchema, scheduleLabel } from '@cmstack-ts/config';
+import { pageDetailSchema } from '@cmstack-ts/config';
 import type { PageDetail } from '@cmstack-ts/config';
 import Link from 'next/link';
 import { z } from 'zod';
-import { PageRowActions } from './page-row-actions';
+import { PagesBulkTable } from './pages-bulk-table';
 
 export const dynamic = 'force-dynamic';
 
 const pageListSchema = z.array(pageDetailSchema);
-
-function badgeFor(label: 'scheduled' | 'published' | 'draft'): {
-  variant: 'success' | 'muted' | 'outline';
-  text: string;
-} {
-  if (label === 'published') return { variant: 'success', text: 'Published' };
-  if (label === 'scheduled') return { variant: 'outline', text: 'Scheduled' };
-  return { variant: 'muted', text: 'Draft' };
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 type Tab = 'all' | 'published' | 'draft' | 'trash';
 
@@ -125,51 +99,7 @@ export default async function PagesPage({ searchParams }: PagesPageProps) {
           )}
         </div>
       ) : (
-        <div className="border border-border rounded-lg bg-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="w-12 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pages.map((page) => (
-                <TableRow key={page.id}>
-                  <TableCell>
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground truncate max-w-xs">{page.title}</p>
-                      <p className="font-mono text-xs text-muted-foreground mt-0.5 truncate max-w-xs">
-                        /{page.slug}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {(() => {
-                      const badge = badgeFor(
-                        scheduleLabel(page.status, page.scheduledAt, new Date()),
-                      );
-                      return <Badge variant={badge.variant}>{badge.text}</Badge>;
-                    })()}
-                  </TableCell>
-                  <TableCell>
-                    <time
-                      dateTime={page.updatedAt}
-                      className="font-mono text-xs text-muted-foreground tabular-nums"
-                    >
-                      {formatDate(page.updatedAt)}
-                    </time>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <PageRowActions page={page} isTrash={isTrash} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <PagesBulkTable pages={pages} isTrash={isTrash} />
       )}
     </div>
   );

@@ -1,12 +1,3 @@
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { apiGet } from '@/lib/admin/api';
 import { canModerateComments, requireAdminSession } from '@/lib/admin/guard';
 import {
@@ -16,18 +7,11 @@ import {
 } from '@cmstack-ts/config';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CommentRowActions } from './comment-row-actions';
+import { CommentsBulkTable } from './comments-bulk-table';
 
 export const dynamic = 'force-dynamic';
 
 const STATUSES: (CommentStatus | 'ALL')[] = ['PENDING', 'APPROVED', 'SPAM', 'TRASH', 'ALL'];
-
-const STATUS_VARIANT: Record<CommentStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  PENDING: 'default',
-  APPROVED: 'secondary',
-  SPAM: 'destructive',
-  TRASH: 'outline',
-};
 
 async function fetchComments(status: string): Promise<AdminCommentList | null> {
   try {
@@ -37,14 +21,6 @@ async function fetchComments(status: string): Promise<AdminCommentList | null> {
   } catch {
     return null;
   }
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 export default async function CommentsPage({
@@ -98,58 +74,7 @@ export default async function CommentsPage({
           <p className="text-sm text-muted-foreground">No comments in this view.</p>
         </div>
       ) : (
-        <div className="border border-border rounded-lg bg-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Author</TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead>Post</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.items.map((comment) => (
-                <TableRow key={comment.id}>
-                  <TableCell className="align-top">
-                    <div className="text-sm font-medium text-foreground">{comment.authorName}</div>
-                    <div className="text-xs text-muted-foreground">{comment.authorEmail}</div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">
-                      {formatDate(comment.createdAt)}
-                    </div>
-                  </TableCell>
-                  <TableCell className="align-top max-w-sm">
-                    <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-                      {comment.content}
-                    </p>
-                    {comment.parentId && (
-                      <span className="text-[10px] text-muted-foreground">↳ reply</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <Link
-                      href={`/blog/${comment.postSlug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-                    >
-                      {comment.postTitle}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <Badge variant={STATUS_VARIANT[comment.status]}>
-                      {comment.status.charAt(0) + comment.status.slice(1).toLowerCase()}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="align-top text-right">
-                    <CommentRowActions comment={comment} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CommentsBulkTable comments={data.items} />
       )}
     </div>
   );
