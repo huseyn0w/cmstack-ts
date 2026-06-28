@@ -47,8 +47,8 @@ export async function MagazineHome() {
         style={{
           display: 'inline-block',
           padding: '0.7rem 1.6rem',
-          background: 'var(--accent)',
-          color: '#fff',
+          background: 'var(--primary)',
+          color: 'var(--primary-contrast)',
           textDecoration: 'none',
           fontFamily: 'var(--font-sans)',
           fontSize: 13,

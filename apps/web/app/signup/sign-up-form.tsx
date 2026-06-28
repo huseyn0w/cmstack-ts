@@ -145,14 +145,14 @@ export function SignUpForm() {
         style={{
           width: '100%',
           padding: '0.7rem',
-          background: 'var(--accent)',
+          background: 'var(--primary)',
           border: 'none',
           borderRadius: 6,
           cursor: 'pointer',
           fontSize: 15,
           fontFamily: 'inherit',
           fontWeight: 600,
-          color: '#0b0b0c',
+          color: 'var(--primary-contrast)',
           opacity: loading ? 0.6 : 1,
         }}
       >

@@ -109,8 +109,8 @@ export function SignInForm({ googleEnabled, githubEnabled }: Props) {
           disabled={loading}
           style={{
             ...btnStyle,
-            background: 'var(--accent)',
-            color: '#0b0b0c',
+            background: 'var(--primary)',
+            color: 'var(--primary-contrast)',
             border: 'none',
             fontWeight: 600,
             opacity: loading ? 0.6 : 1,
