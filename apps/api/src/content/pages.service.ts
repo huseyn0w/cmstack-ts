@@ -48,6 +48,8 @@ export class PagesService {
       slug,
       content: this.sanitizer.sanitize(input.content ?? ''),
       status: input.status ?? 'DRAFT',
+      scheduledAt:
+        input.status === 'PUBLISHED' ? null : input.scheduledAt ? new Date(input.scheduledAt) : null,
       metaTitle: input.metaTitle ?? null,
       metaDescription: input.metaDescription ?? null,
       canonicalUrl: input.canonicalUrl ?? null,
@@ -73,6 +75,11 @@ export class PagesService {
     if (input.metaDescription !== undefined) data.metaDescription = input.metaDescription ?? null;
     if (input.canonicalUrl !== undefined) data.canonicalUrl = input.canonicalUrl ?? null;
     if (input.noindex !== undefined) data.noindex = input.noindex;
+    if (input.scheduledAt !== undefined) {
+      data.scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : null;
+    }
+    // A manual publish cancels any pending schedule.
+    if (data.status === 'PUBLISHED') data.scheduledAt = null;
 
     const page = await this.pages.update(id, data);
     await this.hooks.emit('content.changed', { type: 'page', id: page.id, slug: page.slug });
@@ -165,6 +172,22 @@ export class PagesService {
     const revision = await this.revisionRepo.findById(revisionId);
     if (!revision || revision.pageId !== id) throw new NotFoundException('Revision not found.');
     return this.update(id, revisionToPageUpdate(revision.snapshot), authorId);
+  }
+
+  /** Publish a single due draft page (race-safe; reuses repo.update). Pages have
+   * no publishedAt and emit only content.changed (post.published is post-only). */
+  async publishScheduled(id: string): Promise<void> {
+    const page = await this.pages.findActiveById(id);
+    if (!page || page.status !== 'DRAFT' || !page.scheduledAt) return;
+    const updated = await this.pages.update(id, { status: 'PUBLISHED', scheduledAt: null });
+    await this.hooks.emit('content.changed', { type: 'page', id: updated.id, slug: updated.slug });
+  }
+
+  /** Publish all draft pages whose scheduledAt is due. Returns the count published. */
+  async publishDue(now: Date): Promise<number> {
+    const due = await this.pages.findDueScheduledIds(now);
+    for (const { id } of due) await this.publishScheduled(id);
+    return due.length;
   }
 
   private async ensureExists(id: string): Promise<void> {

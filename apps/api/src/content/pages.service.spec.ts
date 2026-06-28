@@ -212,4 +212,43 @@ describe('PagesService', () => {
     );
     expect(pages.update).not.toHaveBeenCalled();
   });
+
+  it('create stores scheduledAt for a draft', async () => {
+    pages.create.mockResolvedValue(pageRow());
+    await service.create({ title: 'A', content: '', scheduledAt: '2026-07-01T09:00:00.000Z' }, 'u1');
+    expect(pages.create.mock.calls[0]?.[0].scheduledAt).toEqual(
+      new Date('2026-07-01T09:00:00.000Z'),
+    );
+  });
+
+  it('publishScheduled publishes a due draft and emits content.changed', async () => {
+    pages.findActiveById.mockResolvedValue(
+      pageRow({ status: 'DRAFT', scheduledAt: new Date('2026-06-28T11:00:00Z') }),
+    );
+    pages.update.mockResolvedValue(pageRow({ status: 'PUBLISHED' }));
+    await service.publishScheduled('pg1');
+    const data = pages.update.mock.calls[0]?.[1];
+    expect(data.status).toBe('PUBLISHED');
+    expect(data.scheduledAt).toBeNull();
+    expect(hooks.emit).toHaveBeenCalledWith(
+      'content.changed',
+      expect.objectContaining({ type: 'page' }),
+    );
+  });
+
+  it('publishScheduled is a no-op for a non-scheduled page', async () => {
+    pages.findActiveById.mockResolvedValue(pageRow({ status: 'PUBLISHED', scheduledAt: null }));
+    await service.publishScheduled('pg1');
+    expect(pages.update).not.toHaveBeenCalled();
+  });
+
+  it('publishDue publishes every due page id', async () => {
+    pages.findDueScheduledIds.mockResolvedValue([{ id: 'pg1' }, { id: 'pg2' }]);
+    pages.findActiveById.mockResolvedValue(
+      pageRow({ status: 'DRAFT', scheduledAt: new Date('2026-06-28T11:00:00Z') }),
+    );
+    pages.update.mockResolvedValue(pageRow({ status: 'PUBLISHED' }));
+    expect(await service.publishDue(new Date('2026-06-28T12:00:00Z'))).toBe(2);
+    expect(pages.update).toHaveBeenCalledTimes(2);
+  });
 });

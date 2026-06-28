@@ -73,6 +73,8 @@ export class PostsService {
         content: this.sanitizer.sanitize(input.content ?? ''),
         status,
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
+        scheduledAt:
+          status === 'PUBLISHED' ? null : input.scheduledAt ? new Date(input.scheduledAt) : null,
         metaTitle: input.metaTitle ?? null,
         metaDescription: input.metaDescription ?? null,
         canonicalUrl: input.canonicalUrl ?? null,
@@ -123,6 +125,11 @@ export class PostsService {
     if (input.metaDescription !== undefined) data.metaDescription = input.metaDescription ?? null;
     if (input.canonicalUrl !== undefined) data.canonicalUrl = input.canonicalUrl ?? null;
     if (input.noindex !== undefined) data.noindex = input.noindex;
+    if (input.scheduledAt !== undefined) {
+      data.scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : null;
+    }
+    // A manual publish cancels any pending schedule.
+    if (data.status === 'PUBLISHED') data.scheduledAt = null;
     if (input.categoryIds !== undefined) data.categoryIds = input.categoryIds;
     if (input.tagIds !== undefined) data.tagIds = input.tagIds;
 
@@ -283,6 +290,30 @@ export class PostsService {
     const revision = await this.revisionRepo.findById(revisionId);
     if (!revision || revision.postId !== id) throw new NotFoundException('Revision not found.');
     return this.update(id, revisionToPostUpdate(revision.snapshot), authorId);
+  }
+
+  /** Publish a single due draft (race-safe). Goes through repo.update directly
+   * (no revision snapshot for an automated status flip) and emits the publish +
+   * cache-invalidation events. */
+  async publishScheduled(id: string): Promise<void> {
+    const post = await this.posts.findActiveById(id);
+    if (!post || post.status !== 'DRAFT' || !post.scheduledAt) return;
+    const data: PostUpdateData = { status: 'PUBLISHED', scheduledAt: null };
+    if (post.publishedAt === null) data.publishedAt = new Date();
+    const updated = await this.posts.update(id, data);
+    await this.hooks.emit('post.published', {
+      id: updated.id,
+      slug: updated.slug,
+      title: updated.title,
+    });
+    await this.hooks.emit('content.changed', { type: 'post', id: updated.id, slug: updated.slug });
+  }
+
+  /** Publish all drafts whose scheduledAt is due. Returns the count published. */
+  async publishDue(now: Date): Promise<number> {
+    const due = await this.posts.findDueScheduledIds(now);
+    for (const { id } of due) await this.publishScheduled(id);
+    return due.length;
   }
 
   private async ensureExists(id: string): Promise<void> {
