@@ -1,7 +1,7 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#10 done + shared net-new: revision-restore UI + scheduled publishing done).** · **Branch:** `refactor/repository-layer` (off `main`)
-**Next phases:** Task 1 shared net-new continuing — next is **RSS/Atom feeds** (then comment-notification email). Task 3 (UI), Task 5 (README) not started.
+**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#10 done + shared net-new: revision-restore UI + scheduled publishing + RSS/Atom feeds done).** · **Branch:** `refactor/repository-layer` (off `main`)
+**Next phases:** Task 1 shared net-new continuing — next is **comment-notification email**. Task 3 (UI), Task 5 (README) not started.
 
 ## Task 1 progress (feature parity, `REFACTOR_PLAN.md` §7 — strict order per operator)
 - **E2E baseline re-run (pre-Task-1):** full stack up (docker db + built api + built web),
@@ -296,10 +296,35 @@
   - **Scoped out (logged):** revision snapshot on auto-publish; distributed worker lock for
     multi-instance deploys (single-process today); scheduled unpublish/expiry; timezone modeling
     beyond ISO/UTC.
-- **Next shared net-new:** **RSS/Atom feeds** (a public feed of published posts — additive read
-  route, no migration; likely a pure builder like the sitemap/llms.txt under `apps/web/lib/seo` or a
-  feed route). Then comment-notification email (next `HookRegistry` consumer after
-  `contact.submitted`).
+- **Shared net-new #3 — RSS/Atom feeds: DONE** (2026-06-28). Canon `../FEATURE_MATRIX.md` flagged
+  syndication as a gap. **Web-only, no API/schema/migration change** (drives the existing
+  `/public/posts` + `/public/seo` reads). Pure builder `apps/web/lib/seo/feed.ts`
+  (`buildRssFeed` → RSS 2.0, `buildAtomFeed` → Atom 1.0) — both sort posts newest-first by
+  `publishedAt ?? updatedAt`, cap at **50** items, and **XML-escape every dynamic field**
+  (`&<>"'`, `&` first) like the JsonLd surface (titles/excerpts/author/org all admin-editable).
+  RSS uses RFC-822 `pubDate` (`toUTCString`), `dc:creator` for author (only when present),
+  `<description>` only when the post has an excerpt, `atom:link rel=self`. Atom uses ISO
+  `updated`/`published`, `<id>`=post URL, feed-level `<author>` (org name) fallback + per-entry
+  author. Routes `app/feed.xml/route.ts` (`application/rss+xml`) + `app/atom.xml/route.ts`
+  (`application/atom+xml`), both `force-dynamic`; each **filters out `noindex` posts** (consistent
+  with sitemap/llms). `PublicPostRef` (in `lib/seo/fetch.ts`) extended additively with
+  `excerpt` + `author` (sitemap/llms unaffected). **Feed auto-discovery** added to the shared
+  `alternatesFor` helper (`lib/i18n/metadata.ts`) — Next *replaces* (not merges) `alternates`
+  per route, so the `<link rel="alternate" type="application/rss+xml|atom+xml">` links must live
+  there to appear site-wide; canonical + hreflang stay intact. **509 tests** (+14 feed unit
+  tests), typecheck/lint clean, coverage 90.31% (gate ≥80%); **live-verified** (full stack:
+  `/feed.xml` 7 items + `/atom.xml` 7 entries, both `xmllint`-well-formed, correct content-types,
+  `dc:creator`/escaping/RFC-822 dates confirmed; discovery links render on `/` and `/de/blog`;
+  canonical+hreflang en/de/ru/x-default unaffected). Adversarial self-review: 0 HIGH/MED (XML
+  escaping, no email leak — only `author.name` mapped, noindex filter, newest-first + cap,
+  null-date fallback, empty-feed guards, discovery-override fix all checked); 1 LOW (XML
+  control-char stripping not done — consistent with existing llms.txt/JsonLd surfaces).
+  - **Scoped out (logged):** per-category/per-tag feeds; per-locale feeds (`/de/feed.xml`); full
+    post content in the feed body (excerpt only); JSON Feed; WebSub/PubSubHubbub.
+- **Next shared net-new:** **comment-notification email** (next `HookRegistry` consumer after
+  `contact.submitted`) — emit a `comment.submitted`/`comment.created` event on a new pending
+  comment, wire a fault-isolated mail listener (reuse the §7 #3 `MailService`) to notify the
+  configured recipient. No cached public read changes, so no new cache-invalidation event needed.
 
 ---
 
@@ -377,7 +402,8 @@ effects) → repository (data access, framework-free, returns Prisma payloads)`.
 1. **Task 1 — feature parity** (`REFACTOR_PLAN.md` §7): per-locale content translation,
    per-content SEO meta, password reset + transactional email, menu builder, contact form,
    GA4/GTM, auto thumbnails, plugin admin UI, Redis cache, and the shared net-new
-   (revision-restore UI, scheduled publishing, RSS, comment-notification email). These bring
+   (revision-restore UI, scheduled publishing, RSS/Atom feeds — all DONE; comment-notification
+   email next). These bring
    DB migrations (ship reversible) and will attach side-effects to the observer per §2.7.
 2. **Task 3 — UI** (`REFACTOR_PLAN.md` §8): conform public site + admin to
    `../DESIGN_SYSTEM.md`; Lighthouse ≥95 mobile + WCAG AA, measured.
@@ -468,7 +494,7 @@ pnpm e2e                                                  # 11/11 (web-alone; li
 ## Continuation prompt (paste into a fresh window)
 > You are continuing the `cmstack-ts` engagement (senior TS engineer, autonomous).
 > Working dir `/Users/huseyn0w/Desktop/SWE/cmstack/cmstack-ts`, branch
-> `refactor/repository-layer` (clean tree, all committed; **495 tests, typecheck + biome
+> `refactor/repository-layer` (clean tree, all committed; **509 tests, typecheck + biome
 > clean, coverage gate ≥80% (actual 90.31%)**). **DONE:** Task 2 (repository-layer refactor) + Task 4
 > (tests); the E2E baseline re-run (11/11, refactor confirmed black-box-invariant); and
 > **Task 1 §7 items #1 (per-locale content translation), #2 (per-content SEO meta), #3
@@ -478,17 +504,19 @@ pnpm e2e                                                  # 11/11 (web-alone; li
 > #10 (caching layer — Redis/memory, event-driven invalidation via `HookRegistry`)** —
 > all live-verified. **The §7 register is now fully ticked**, and **two shared net-new items are
 > done: revision-restore UI** (restore reuses `update` → reversible + sanitized + cache-invalidating;
-> field-level compare panel) **and scheduled publishing** (`scheduledAt` on a DRAFT + a
+> field-level compare panel)**, scheduled publishing** (`scheduledAt` on a DRAFT + a
 > `@nestjs/schedule` minute-interval worker auto-publishes due drafts via `publishDue`; emits
-> `post.published` + `content.changed`). **Read first:**
+> `post.published` + `content.changed`)**, and RSS/Atom feeds** (web-only pure builder
+> `lib/seo/feed.ts` → `/feed.xml` + `/atom.xml`, XML-escaped, noindex-filtered, 50-item cap, feed
+> auto-discovery via `alternatesFor`). **Read first:**
 > `cmstack-ts/HANDOFF.md` (the Task-1 progress section + "Full stack for LIVE verification"
 > recipe + Gotchas), `cmstack-ts/REFACTOR_PLAN.md` (§2.0 layering, §2.7 observer policy,
 > §7 feature register with #1–#10 checked, §10 invariants), `cmstack-ts/CLAUDE.md`, and the
 > read-only canon `../FEATURE_MATRIX.md` + `../DESIGN_SYSTEM.md` (do NOT edit the canon).
 > The design+plan docs for finished items are in `docs/superpowers/{specs,plans}/`.
 >
-> **Resume with the Task 1 shared net-new** (operator directive) — revision-restore UI + scheduled
-> publishing are DONE; next is **RSS/Atom feeds**, then comment-notification email. Then Task 3 (UI §8) +
+> **Resume with the Task 1 shared net-new** (operator directive) — revision-restore UI, scheduled
+> publishing + RSS/Atom feeds are DONE; next is **comment-notification email**. Then Task 3 (UI §8) +
 > Task 5 (full README rewrite). **Observer note:** §7 #5 wired the first real side effect
 > (`contact.submitted` → mail listener); §7 #10 added four cache-invalidation events
 > (`content.changed`/`settings.theme.changed`/`menu.changed`/`seo.changed`); the

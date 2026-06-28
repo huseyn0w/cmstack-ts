@@ -17,5 +17,12 @@ export function alternatesFor(locale: string, path: string): NonNullable<Metadat
   return {
     canonical: localizedUrl(locale, path, opts),
     languages: languageAlternates(path, opts),
+    // Feed auto-discovery, site-wide. Next replaces (not merges) the whole
+    // `alternates` object per route, so the feed links must live here — every
+    // public page builds its alternates through this helper.
+    types: {
+      'application/rss+xml': [{ url: `${siteUrl}/feed.xml`, title: 'RSS' }],
+      'application/atom+xml': [{ url: `${siteUrl}/atom.xml`, title: 'Atom' }],
+    },
   };
 }
