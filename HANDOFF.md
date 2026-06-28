@@ -37,10 +37,23 @@ Canon is the cross-stack visual contract: quiet-luxury editorial, LIGHT default 
     conformance for the public chrome (header sticky/scroll states, cards 16:9 + eyebrow,
     pagination, breadcrumbs, prose 68ch). Palette + type are canon; the component *structure* is
     still the pre-existing Phase-9 markup.
-  - **Next (increment 3):** admin UI kit → §5 specs (buttons/inputs/cards/tables+bulk/tabs/
-    breadcrumbs/dropdowns/avatars/badges/modals/toasts/alerts/pagination/empty/dropzone/sortable/
-    rich-text), each with states + a11y. Then increment 4 (admin shell), increment 5
-    (Lighthouse ≥95 mobile + WCAG AA, **measured**).
+- **Increment 3a — core UI primitives → §5 + contrast-regression fix: DONE** (2026-06-28).
+  **Button** (canon sizes sm32/md40/lg48, focus ring 2px offset 2px, active scale .98, primary
+  hover→`--primary-hover`, outline→`--border-strong`), **Input/Textarea** (h40, radius-sm, surface
+  bg, focus offset 1px, `aria-invalid`→error border+ring), **Badge** (canon pill rounded-full h22
+  + semantic `--*-bg`/`--*` tokens, dropped hardcoded emerald). **Contrast fix:** the auth forms
+  (signin/signup/forgot/reset) + magazine CTA hardcoded dark/white text on `var(--accent)`; since
+  increment 1 flipped `--accent` gold→garnet that **failed WCAG AA** → switched to canon
+  `background:var(--primary)` + `color:var(--primary-contrast)` (#fff on #B23A2E ≈ 4.73:1).
+  **519 tests, typecheck/lint clean, e2e 11/11**; probe-verified the sign-in button renders white
+  on garnet. ⚠️ **Watch-out for future increments:** any hand-rolled element putting fixed text on
+  `var(--accent)` as a *background* has the same regression — audit per screen (text/link uses of
+  `--accent` are fine: garnet on paper).
+  - **Next (increment 3b):** remaining UI kit — table (+bulk bar), dialog/modal, dropdown-menu,
+    select, sonner/toasts, skeleton, + NEW: tabs (translation editor), breadcrumbs, avatar, alert
+    banner, empty-state, pagination — each states + a11y. Then increment 4 (admin shell: sidebar/
+    topbar/skip-link), increment 2c (public chrome §5), increment 5 (Lighthouse ≥95 mobile +
+    WCAG AA, **measured**).
 
 ## Task 1 progress (feature parity, `REFACTOR_PLAN.md` §7 — strict order per operator)
 - **E2E baseline re-run (pre-Task-1):** full stack up (docker db + built api + built web),
