@@ -7,13 +7,21 @@ import { CommentsService } from './comments.service';
 let posts: { findPublishedIdBySlug: Mock };
 let comments: Record<keyof CommentRepository, Mock>;
 let recaptcha: { verify: Mock };
+let hooks: { emit: Mock };
 let service: CommentsService;
+
+const createdRow = {
+  id: 'c1',
+  authorName: 'Ada',
+  content: 'Nice post',
+  post: { slug: 'slug', title: 'My Post' },
+};
 
 beforeEach(() => {
   posts = { findPublishedIdBySlug: vi.fn().mockResolvedValue('p1') };
   comments = {
     findApprovedById: vi.fn(),
-    create: vi.fn(),
+    create: vi.fn().mockResolvedValue(createdRow),
     listApprovedForPost: vi.fn(),
     listAndCount: vi.fn(),
     exists: vi.fn(),
@@ -21,10 +29,12 @@ beforeEach(() => {
     hardDelete: vi.fn(),
   };
   recaptcha = { verify: vi.fn().mockResolvedValue(true) };
+  hooks = { emit: vi.fn().mockResolvedValue(undefined) };
   service = new CommentsService(
     posts as unknown as PostRepository,
     comments as unknown as CommentRepository,
     recaptcha as unknown as RecaptchaService,
+    hooks as never,
   );
 });
 
@@ -65,6 +75,19 @@ describe('CommentsService.submit', () => {
       content: 'Nice post',
       status: 'PENDING',
     });
+  });
+
+  it('emits comment.submitted (without author email) so the moderator is notified', async () => {
+    await service.submit('slug', input);
+    expect(hooks.emit).toHaveBeenCalledWith('comment.submitted', {
+      id: 'c1',
+      postSlug: 'slug',
+      postTitle: 'My Post',
+      authorName: 'Ada',
+      content: 'Nice post',
+    });
+    const payload = hooks.emit.mock.calls[0]?.[1];
+    expect(payload).not.toHaveProperty('authorEmail');
   });
 });
 

@@ -36,7 +36,8 @@ export type AdminCommentFilter = {
 export interface CommentRepository {
   /** An APPROVED comment with this id on the given post (parent validation), or null. */
   findApprovedById(id: string, postId: string): Promise<{ id: string } | null>;
-  create(data: CommentCreateData): Promise<void>;
+  /** Persist a comment and return it with its post's slug/title (for notifications). */
+  create(data: CommentCreateData): Promise<AdminCommentRow>;
   /** APPROVED comments for a post, oldest first, WITHOUT author email. */
   listApprovedForPost(postId: string): Promise<FlatCommentRow[]>;
   listAndCount(filter: AdminCommentFilter): Promise<{ items: AdminCommentRow[]; total: number }>;
@@ -59,8 +60,8 @@ export class PrismaCommentRepository extends PrismaCrudRepository implements Com
     });
   }
 
-  async create(data: CommentCreateData): Promise<void> {
-    await this.prisma.comment.create({ data });
+  create(data: CommentCreateData): Promise<AdminCommentRow> {
+    return this.prisma.comment.create({ data, include: adminInclude });
   }
 
   listApprovedForPost(postId: string): Promise<FlatCommentRow[]> {

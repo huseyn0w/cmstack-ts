@@ -14,6 +14,7 @@ import {
   type PostRepository,
 } from '@cmstack-ts/db';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { HookRegistry } from '../plugins/hook-registry';
 import { RecaptchaService } from '../spam/recaptcha.service';
 import { buildCommentThread } from './thread';
 
@@ -23,6 +24,7 @@ export class CommentsService {
     @Inject(POST_REPOSITORY) private readonly posts: PostRepository,
     @Inject(COMMENT_REPOSITORY) private readonly comments: CommentRepository,
     private readonly recaptcha: RecaptchaService,
+    private readonly hooks: HookRegistry,
   ) {}
 
   /** Public submission. New comments are PENDING until an editor approves them. */
@@ -41,13 +43,24 @@ export class CommentsService {
       if (!parent) throw new BadRequestException('Invalid parent comment.');
     }
 
-    await this.comments.create({
+    const created = await this.comments.create({
       postId,
       parentId: input.parentId ?? null,
       authorName: input.authorName,
       authorEmail: input.authorEmail,
       content: input.content,
       status: 'PENDING',
+    });
+
+    // Side effect: notify the moderator. Fault-isolated — a mail failure can't
+    // fail the already-stored comment or the public response (§2.7). The author
+    // email is deliberately left out of the event payload (PII minimization).
+    await this.hooks.emit('comment.submitted', {
+      id: created.id,
+      postSlug: created.post.slug,
+      postTitle: created.post.title,
+      authorName: created.authorName,
+      content: created.content,
     });
 
     return { status: 'PENDING' };

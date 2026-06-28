@@ -37,6 +37,18 @@ export interface ActionMap {
     message: string;
   };
   /**
+   * Fired after a new (PENDING) comment is stored from the public site. The
+   * comments module's mail listener notifies the moderator; fault-isolated, so a
+   * mail failure never fails the public submit. Carries no author email (PII).
+   */
+  'comment.submitted': {
+    id: string;
+    postSlug: string;
+    postTitle: string;
+    authorName: string;
+    content: string;
+  };
+  /**
    * Fired after any write to a post or page (create/update/delete/restore/
    * publish/translation). The caching layer flushes the matching content
    * namespace. `slug` is best-effort (absent on delete-by-id paths).

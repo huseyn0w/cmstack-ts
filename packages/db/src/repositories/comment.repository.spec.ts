@@ -27,6 +27,25 @@ describe('PrismaCommentRepository', () => {
     });
   });
 
+  it('create() persists the comment and returns it with the post slug/title', async () => {
+    const { repo, comment } = make();
+    comment.create.mockResolvedValue({ id: 'c1', post: { slug: 's', title: 'T' } });
+    const data = {
+      postId: 'p1',
+      parentId: null,
+      authorName: 'Ada',
+      authorEmail: 'a@x.test',
+      content: 'hi',
+      status: 'PENDING' as const,
+    };
+    const row = await repo.create(data);
+    expect(comment.create).toHaveBeenCalledWith({
+      data,
+      include: { post: { select: { slug: true, title: true } } },
+    });
+    expect(row).toEqual({ id: 'c1', post: { slug: 's', title: 'T' } });
+  });
+
   it('listApprovedForPost() never selects the author email', async () => {
     const { repo, comment } = make();
     comment.findMany.mockResolvedValue([]);

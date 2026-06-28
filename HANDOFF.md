@@ -1,7 +1,7 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 IN PROGRESS (§7 #1–#10 done + shared net-new: revision-restore UI + scheduled publishing + RSS/Atom feeds done).** · **Branch:** `refactor/repository-layer` (off `main`)
-**Next phases:** Task 1 shared net-new continuing — next is **comment-notification email**. Task 3 (UI), Task 5 (README) not started.
+**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; E2E re-run green; Task 1 §7 #1–#10 done + ALL shared net-new done (revision-restore UI + scheduled publishing + RSS/Atom feeds + comment-notification email).** · **Branch:** `refactor/repository-layer` (off `main`)
+**Next phases:** Task 1 feature register fully ticked → **Task 3 (UI §8)** + **Task 5 (README rewrite)** remain.
 
 ## Task 1 progress (feature parity, `REFACTOR_PLAN.md` §7 — strict order per operator)
 - **E2E baseline re-run (pre-Task-1):** full stack up (docker db + built api + built web),
@@ -321,10 +321,35 @@
   control-char stripping not done — consistent with existing llms.txt/JsonLd surfaces).
   - **Scoped out (logged):** per-category/per-tag feeds; per-locale feeds (`/de/feed.xml`); full
     post content in the feed body (excerpt only); JSON Feed; WebSub/PubSubHubbub.
-- **Next shared net-new:** **comment-notification email** (next `HookRegistry` consumer after
-  `contact.submitted`) — emit a `comment.submitted`/`comment.created` event on a new pending
-  comment, wire a fault-isolated mail listener (reuse the §7 #3 `MailService`) to notify the
-  configured recipient. No cached public read changes, so no new cache-invalidation event needed.
+- **Shared net-new #4 — comment-notification email: DONE** (2026-06-28). Second real side effect
+  on the observer (sibling of `contact.submitted`). **No migration, no API contract change** (public
+  submit still returns `{status:'PENDING'}`). New `comment.submitted` `ActionMap` event
+  `{id, postSlug, postTitle, authorName, content}` — **carries no author email (PII minimization)**.
+  `CommentsService.submit` now captures the created row and `emit`s the event after the store;
+  fault-isolated (a mail failure can't fail the public submit). `CommentRepository.create` changed
+  from `Promise<void>` → returns the row with its post slug/title (reuses `adminInclude`, one query,
+  no N+1) so the service needs no extra fetch. New pure builder
+  `apps/api/src/mail/comment-notification-email.ts` (`commentNotificationEmail`, **HTML-escaped**
+  author/content/title, optional moderation link) + `CommentMailListener` (resolves recipient via the
+  §7 #5 `resolveContactRecipient`: profile.contactEmail → `COMMENT_NOTIFICATION_EMAIL` →
+  `CONTACT_RECIPIENT_EMAIL` → MAIL_FROM; links to `WEB_ORIGIN/admin/comments` when set; reuses the
+  §7 #3 `MailService`). `CommentsModule` now imports `MailModule`+`PluginsModule`, provides the
+  listener + `SITE_PROFILE_REPOSITORY`, and registers `comment.submitted` → listener in
+  `onModuleInit` (mirrors `ContactModule`). `.env.example` documents `COMMENT_NOTIFICATION_EMAIL`.
+  **No cache event** — a pending comment changes no cached public read (comments aren't cached;
+  pending isn't public). **519 tests** (+10: builder 4, listener 4, repo create 1, service emit 1),
+  typecheck/lint clean, coverage 90.42% (gate ≥80%), **e2e 11/11**; **live-verified** (real submit →
+  API log shows the notification with the post title, author, content + `…/admin/comments` link;
+  comment stored PENDING and absent from the public approved list; recipient → MAIL_FROM with no
+  profile/env email, → `moderator@cmstack.test` with `COMMENT_NOTIFICATION_EMAIL` set). Adversarial
+  self-review: 0 HIGH/MED (fault isolation, emit-after-store-only, no-PII payload, HTML escape,
+  WEB_ORIGIN-only adminUrl, recipient chain, no cache-event-needed all checked); 1 LOW (notification
+  omits the commenter email by design — visible in the moderation queue).
+  - **Scoped out (logged):** notifying per-comment-author (reply threads); digest/batching; including
+    the commenter email for one-click reply; localized notification copy (admin stays English).
+- **Next shared net-new:** none — the shared net-new register (revision-restore UI, scheduled
+  publishing, RSS/Atom feeds, comment-notification email) is fully ticked. Remaining engagement
+  work: **Task 3 (UI §8)** + **Task 5 (README rewrite)**.
 
 ---
 
@@ -402,8 +427,8 @@ effects) → repository (data access, framework-free, returns Prisma payloads)`.
 1. **Task 1 — feature parity** (`REFACTOR_PLAN.md` §7): per-locale content translation,
    per-content SEO meta, password reset + transactional email, menu builder, contact form,
    GA4/GTM, auto thumbnails, plugin admin UI, Redis cache, and the shared net-new
-   (revision-restore UI, scheduled publishing, RSS/Atom feeds — all DONE; comment-notification
-   email next). These bring
+   (revision-restore UI, scheduled publishing, RSS/Atom feeds, comment-notification email —
+   **all DONE**). These bring
    DB migrations (ship reversible) and will attach side-effects to the observer per §2.7.
 2. **Task 3 — UI** (`REFACTOR_PLAN.md` §8): conform public site + admin to
    `../DESIGN_SYSTEM.md`; Lighthouse ≥95 mobile + WCAG AA, measured.
@@ -494,8 +519,8 @@ pnpm e2e                                                  # 11/11 (web-alone; li
 ## Continuation prompt (paste into a fresh window)
 > You are continuing the `cmstack-ts` engagement (senior TS engineer, autonomous).
 > Working dir `/Users/huseyn0w/Desktop/SWE/cmstack/cmstack-ts`, branch
-> `refactor/repository-layer` (clean tree, all committed; **509 tests, typecheck + biome
-> clean, coverage gate ≥80% (actual 90.31%)**). **DONE:** Task 2 (repository-layer refactor) + Task 4
+> `refactor/repository-layer` (clean tree, all committed; **519 tests, typecheck + biome
+> clean, coverage gate ≥80% (actual 90.42%)**). **DONE:** Task 2 (repository-layer refactor) + Task 4
 > (tests); the E2E baseline re-run (11/11, refactor confirmed black-box-invariant); and
 > **Task 1 §7 items #1 (per-locale content translation), #2 (per-content SEO meta), #3
 > (password reset + transactional email), #4 (menu management), #5 (contact form + email),
@@ -508,16 +533,20 @@ pnpm e2e                                                  # 11/11 (web-alone; li
 > `@nestjs/schedule` minute-interval worker auto-publishes due drafts via `publishDue`; emits
 > `post.published` + `content.changed`)**, and RSS/Atom feeds** (web-only pure builder
 > `lib/seo/feed.ts` → `/feed.xml` + `/atom.xml`, XML-escaped, noindex-filtered, 50-item cap, feed
-> auto-discovery via `alternatesFor`). **Read first:**
+> auto-discovery via `alternatesFor`)**, and comment-notification email** (new `comment.submitted`
+> observer event → fault-isolated `CommentMailListener` notifies the moderator via the §7 #3
+> `MailService`; PII-minimized payload; `CommentRepository.create` now returns the row).
+> **The Task 1 feature register + ALL shared net-new are now fully ticked** — only Task 3 (UI §8)
+> and Task 5 (README rewrite) remain. **Read first:**
 > `cmstack-ts/HANDOFF.md` (the Task-1 progress section + "Full stack for LIVE verification"
 > recipe + Gotchas), `cmstack-ts/REFACTOR_PLAN.md` (§2.0 layering, §2.7 observer policy,
 > §7 feature register with #1–#10 checked, §10 invariants), `cmstack-ts/CLAUDE.md`, and the
 > read-only canon `../FEATURE_MATRIX.md` + `../DESIGN_SYSTEM.md` (do NOT edit the canon).
 > The design+plan docs for finished items are in `docs/superpowers/{specs,plans}/`.
 >
-> **Resume with the Task 1 shared net-new** (operator directive) — revision-restore UI, scheduled
-> publishing + RSS/Atom feeds are DONE; next is **comment-notification email**. Then Task 3 (UI §8) +
-> Task 5 (full README rewrite). **Observer note:** §7 #5 wired the first real side effect
+> **Resume with Task 3 (UI §8)** then **Task 5 (full README rewrite)** — the Task 1 feature register
+> and ALL shared net-new (revision-restore UI, scheduled publishing, RSS/Atom feeds,
+> comment-notification email) are DONE. **Observer note:** §7 #5 wired the first real side effect
 > (`contact.submitted` → mail listener); §7 #10 added four cache-invalidation events
 > (`content.changed`/`settings.theme.changed`/`menu.changed`/`seo.changed`); the
 > comment-notification email (shared net-new) is the next observer consumer. **Cache note:**
