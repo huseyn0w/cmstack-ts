@@ -1,7 +1,7 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; Task 1 (§7 #1–#10 + ALL shared net-new) COMPLETE; Task 3 (UI) DONE — all increments (1 foundation · 2 public themes+light default · 2c public chrome · 3 UI kit · 4 admin shell+skip-link · 5 measured Lighthouse/WCAG). Only Task 5 (README) remains.** · **Branch:** `refactor/repository-layer` (off `main`)
-**Measured (mobile):** A11y 100 / SEO 100 / BP 96 every public page; Perf home 98, content ~93–94 (web-font LCP under throttle — preload follow-up noted). **Next: Task 5 (README rewrite).**
+**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; Task 1 (§7 #1–#10 + ALL shared net-new) COMPLETE; ALL ENGAGEMENT TASKS COMPLETE — Task 1 (feature parity) · Task 2 (repository layer) · Task 3 (UI) · Task 4 (tests) · Task 5 (README).** · **Branch:** `refactor/repository-layer` (off `main`)
+**Final state:** 519 tests, typecheck + biome clean, coverage 90.42% (gate ≥80%), e2e 11/11. Measured Lighthouse (mobile): A11y 100 / SEO 100 / BP 96 every public page; Perf home 98, content ~93–94 (web-font LCP under throttle — font-preload follow-up noted in §Task 3 #5). README rewritten to the shared cross-stack structure. **Remaining (optional follow-ups only):** content-page Perf font-preload to fully clear ≥95; new canon components (Alert/Empty/Avatar/Pagination/Tabs primitive) as screens need them; magazine-theme §5 component polish.
 
 ## Task 3 (UI conformance to `../DESIGN_SYSTEM.md`) progress
 Plan: `docs/superpowers/plans/2026-06-28-task3-ui-design-system.md` (5 increments, one commit each).
