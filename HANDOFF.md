@@ -1,7 +1,7 @@
 # cmstack-ts — HANDOFF
 
-**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; Task 1 (§7 #1–#10 + ALL shared net-new) COMPLETE; Task 3 (UI) IN PROGRESS — increment 1 (token + typography foundation) done.** · **Branch:** `refactor/repository-layer` (off `main`)
-**Next phases:** Task 3 increments 2–5 (public themes → canon · admin UI kit → §5 · admin shell · Lighthouse/WCAG measured) + **Task 5 (README rewrite)**.
+**Updated:** 2026-06-28 — **Task 2 + Task 4 COMPLETE; Task 1 (§7 #1–#10 + ALL shared net-new) COMPLETE; Task 3 (UI) IN PROGRESS — increments 1 (foundation) + 2 (public themes → canon + light default) done.** · **Branch:** `refactor/repository-layer` (off `main`)
+**Next phases:** Task 3 increments 3–5 (admin UI kit → §5 · admin shell · Lighthouse/WCAG measured) + public-chrome §5 polish + **Task 5 (README rewrite)**.
 
 ## Task 3 (UI conformance to `../DESIGN_SYSTEM.md`) progress
 Plan: `docs/superpowers/plans/2026-06-28-task3-ui-design-system.md` (5 increments, one commit each).
@@ -22,9 +22,25 @@ Canon is the cross-stack visual contract: quiet-luxury editorial, LIGHT default 
   increment** (→ increment 2, which flips the default to canon light). **519 tests, typecheck/lint
   clean, e2e 11/11**; live-verified (compiled CSS has 16 `@font-face`, canon `#b23a2e`/`#fbfaf7`/
   `#f4f1ea`, `h1,h2,h3{font-family:var(--font-serif)…}`, Inter on `<body>`).
-  - **Next (increment 2):** re-skin the public `editorial` (canon dark) + `magazine`/new default
-    (canon light) palettes to §2; public header/footer/cards/prose/pagination/breadcrumbs to §5;
-    flip the seeded default theme to the canon light one.
+- **Increment 2 — public themes → canon + default flip: DONE** (2026-06-28). Two commits:
+  **2a** re-skinned both `.theme-*` wrappers to the full canon §2 token set (legacy
+  `--bg/--fg/--muted/--accent/--line` + canon `--surface/--text/--primary/--border-strong/…`
+  so canon utilities resolve inside themed subtrees). **2b** — per operator decision (canon's
+  "warm paper" default = cross-stack identity), the **default public look is now canon Light**:
+  `.theme-editorial` carries the canon **Light** palette (paper `#FBFAF7`, garnet `#B23A2E`),
+  `.theme-magazine` the canon **Dark** one — a palette swap, so the default theme **id stays
+  `editorial`** (seed/registry/e2e unchanged; keeps its brand identity, matching the canon's own
+  "editorial" naming). Root fallback public tokens flipped to canon Light. Theme meta descriptions
+  updated. **e2e 11/11, biome clean**; **screenshot-verified**: home renders warm paper +
+  Newsreader serif hero + garnet mono eyebrow + Inter nav + mono footer.
+  - **Still pending in the public-theme area (a 2c / fold into increment 3):** component-level §5
+    conformance for the public chrome (header sticky/scroll states, cards 16:9 + eyebrow,
+    pagination, breadcrumbs, prose 68ch). Palette + type are canon; the component *structure* is
+    still the pre-existing Phase-9 markup.
+  - **Next (increment 3):** admin UI kit → §5 specs (buttons/inputs/cards/tables+bulk/tabs/
+    breadcrumbs/dropdowns/avatars/badges/modals/toasts/alerts/pagination/empty/dropzone/sortable/
+    rich-text), each with states + a11y. Then increment 4 (admin shell), increment 5
+    (Lighthouse ≥95 mobile + WCAG AA, **measured**).
 
 ## Task 1 progress (feature parity, `REFACTOR_PLAN.md` §7 — strict order per operator)
 - **E2E baseline re-run (pre-Task-1):** full stack up (docker db + built api + built web),
