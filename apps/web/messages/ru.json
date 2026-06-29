@@ -41,7 +41,8 @@
   },
   "post": {
     "by": "Автор",
-    "unknownAuthor": "Неизвестный автор"
+    "unknownAuthor": "Неизвестный автор",
+    "related": "Похожие записи"
   },
   "services": {
     "title": "Услуги",

@@ -1,20 +1,29 @@
 import { apiBaseUrl } from '@/app/lib/api';
 import { Comments } from '@/components/blog/comments';
 import { LikeButton } from '@/components/blog/like-button';
+import { RelatedPosts } from '@/components/blog/related-posts';
 import { alternatesFor } from '@/lib/i18n/metadata';
 import { getSeoContent } from '@/lib/seo/fetch';
 import { JsonLd } from '@/lib/seo/json-ld';
 import { blogPostingJsonLd } from '@/lib/seo/jsonld';
 import { siteUrl } from '@/lib/seo/site';
 import { getActiveTheme } from '@/themes/active-theme';
-import { type CommentThread, commentThreadSchema, postDetailSchema } from '@cmstack-ts/config';
+import {
+  type CommentThread,
+  type PostSummary,
+  commentThreadSchema,
+  postDetailSchema,
+  postSummarySchema,
+} from '@cmstack-ts/config';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { z } from 'zod';
 import { getLikeState } from './like-actions';
 
 export const dynamic = 'force-dynamic';
 
 const EMPTY_THREAD: CommentThread = { items: [], total: 0 };
+const relatedSchema = z.array(postSummarySchema);
 
 async function getPost(slug: string, locale: string) {
   try {
@@ -27,6 +36,20 @@ async function getPost(slug: string, locale: string) {
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
+  }
+}
+
+async function getRelated(slug: string, locale: string): Promise<PostSummary[]> {
+  try {
+    const res = await fetch(
+      `${apiBaseUrl}/public/posts/${encodeURIComponent(slug)}/related?locale=${encodeURIComponent(locale)}`,
+      { cache: 'no-store' },
+    );
+    if (!res.ok) return [];
+    const parsed = relatedSchema.safeParse(await res.json());
+    return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
   }
 }
 
@@ -81,12 +104,13 @@ export default async function BlogPostPage({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  const [post, { Layout, BlogPost }, { profile }, thread, like] = await Promise.all([
+  const [post, { Layout, BlogPost }, { profile }, thread, like, related] = await Promise.all([
     getPost(slug, locale),
     getActiveTheme(),
     getSeoContent(),
     getComments(slug),
     getLikeState(slug),
+    getRelated(slug, locale),
   ]);
   if (!post) notFound();
 
@@ -115,6 +139,7 @@ export default async function BlogPostPage({
             signedIn={like.signedIn}
           />
           <Comments slug={post.slug} initialThread={thread} />
+          <RelatedPosts posts={related} />
         </div>
       </Layout>
     </>

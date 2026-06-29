@@ -98,6 +98,18 @@ export interface PostRepository {
   findByIdWithTranslations(id: string): Promise<LocalizedPost | null>;
   /** Published, non-trashed post by slug; overlays `locale`'s translation when given. */
   findPublicBySlug(slug: string, locale?: string): Promise<LocalizedPost | null>;
+  /**
+   * Published, non-trashed posts (excluding `postId`) sharing at least one of the
+   * given categories/tags, newest first, capped at `take`. Empty taxonomy → []. The
+   * service ranks these by shared-taxonomy count.
+   */
+  findRelatedPublic(
+    postId: string,
+    categoryIds: string[],
+    tagIds: string[],
+    take: number,
+    locale?: string,
+  ): Promise<LocalizedPost[]>;
   publicByAuthor(authorId: string, locale?: string): Promise<LocalizedPost[]>;
   listAndCount(
     filter: PostListFilter,
@@ -184,6 +196,33 @@ export class PrismaPostRepository extends PrismaCrudRepository implements PostRe
     return this.prisma.post.findFirst({
       where: { slug, status: 'PUBLISHED', deletedAt: null },
       include: localizedPostInclude(locale),
+    });
+  }
+
+  findRelatedPublic(
+    postId: string,
+    categoryIds: string[],
+    tagIds: string[],
+    take: number,
+    locale?: string,
+  ): Promise<LocalizedPost[]> {
+    if (categoryIds.length === 0 && tagIds.length === 0) return Promise.resolve([]);
+    const overlap: Prisma.PostWhereInput[] = [];
+    if (categoryIds.length > 0) overlap.push({ categories: { some: { id: { in: categoryIds } } } });
+    if (tagIds.length > 0) overlap.push({ tags: { some: { id: { in: tagIds } } } });
+    return this.prisma.post.findMany({
+      // noindex posts are excluded — related is a discovery surface, consistent
+      // with the sitemap/feed/llms.txt noindex filtering.
+      where: {
+        id: { not: postId },
+        status: 'PUBLISHED',
+        deletedAt: null,
+        noindex: false,
+        OR: overlap,
+      },
+      include: localizedPostInclude(locale),
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+      take,
     });
   }
 

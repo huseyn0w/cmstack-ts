@@ -41,7 +41,8 @@
   },
   "post": {
     "by": "Von",
-    "unknownAuthor": "Unbekannter Autor"
+    "unknownAuthor": "Unbekannter Autor",
+    "related": "Ähnliche Beiträge"
   },
   "services": {
     "title": "Leistungen",

@@ -33,6 +33,7 @@ import { CacheService } from '../cache/cache.service';
 import { HookRegistry } from '../plugins/hook-registry';
 import { HtmlSanitizerService } from './html-sanitizer.service';
 import { localizeContent } from './localize';
+import { rankRelated } from './related';
 import { revisionToPostUpdate } from './revision-snapshot';
 import { slugify } from './slug';
 
@@ -218,6 +219,40 @@ export class PostsService {
     );
     // Let plugins transform the public post just before it is returned.
     return this.hooks.applyFilters('public.post.render', detail);
+  }
+
+  /**
+   * Published posts sharing taxonomy with the post at `slug`, ranked by overlap
+   * (most-shared first) then recency, capped at `limit` (1–12). An unknown slug or
+   * a post with no taxonomy yields an empty list — this is a supplementary block,
+   * not a 404. Cached in the POSTS namespace (flushed by content.changed).
+   */
+  async findRelated(
+    slug: string,
+    locale: string = DEFAULT_LOCALE,
+    limit = 3,
+  ): Promise<PostSummary[]> {
+    const cap = Math.min(Math.max(1, Math.trunc(limit) || 3), 12);
+    return this.cache.getOrSet(
+      cacheKey(CACHE_NS.POSTS, `related:${slug}:${locale}:${cap}`),
+      async () => {
+        const source = await this.posts.findPublicBySlug(slug);
+        if (!source) return [];
+        const categoryIds = source.categories.map((c) => c.id);
+        const tagIds = source.tags.map((t) => t.id);
+        if (categoryIds.length === 0 && tagIds.length === 0) return [];
+        const candidates = await this.posts.findRelatedPublic(
+          source.id,
+          categoryIds,
+          tagIds,
+          cap * 4,
+          this.translationLocale(locale),
+        );
+        return rankRelated(candidates, categoryIds, tagIds, cap).map((p) =>
+          this.toSummary(this.localize(p)),
+        );
+      },
+    );
   }
 
   /** Create or replace a post's translation for a non-default locale. */

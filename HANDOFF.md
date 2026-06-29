@@ -34,9 +34,19 @@ remaining gaps vs the richest sibling (laravel). **Suggested order (highest valu
      primitives) and users (bulk-delete — deferred: self-deletion guard + low row counts make
      single-delete sufficient for now). No batch *repo* method added (the fan-out reuses
      single-item ops); a true batch endpoint is only worth it if a list grows past ~50 rows/page.
-3. **Related posts** — a "Related posts" block on the post detail (by shared taxonomy).
-   Public read; add a `PostRepository.findRelated(postId, categoryIds/tagIds, limit)` +
-   surface it on `/blog/[slug]` through the theme. No migration.
+3. **Related posts — DONE** (2026-06-29). "Related posts" block under each blog post, ranked
+   by shared taxonomy. **No migration.** API: `PostRepository.findRelatedPublic(postId,
+   categoryIds, tagIds, take, locale?)` (published + non-trashed + **noindex-excluded** + self-
+   excluded, OR-overlap, newest-first) → `PostsService.findRelated(slug, locale, limit 1–12)`
+   ranks candidates by overlap count via the pure `content/related.ts` `rankRelated` (ties keep
+   recency), localizes, caches in the POSTS namespace (flushed by `content.changed`). Public
+   `GET /public/posts/:slug/related?locale=&limit=` (unknown slug / no-taxonomy → `[]`, not 404).
+   Web: shared `components/blog/related-posts.tsx` (theme-agnostic CSS-var styling like
+   `<Comments>`/`<LikeButton>`, locale-aware links, `post.related` i18n key en/de/ru) rendered
+   under the post. **540 tests** (+7: 4 ranker + 3 service), typecheck/lint clean, coverage
+   89.95%; **live-verified** (ranking: shared cat+tag scores above shared-tag-only; self excluded;
+   no-taxonomy → []; unknown → 200 []; SSR renders the block + de heading "Ähnliche Beiträge"
+   with `/de/blog/…` links).
 4. **Search scope + multilingual** — `SearchService`/`SearchRepository`
    (`apps/api/src/content/search.{service,controller}.ts`) currently searches **posts only**;
    canon target is posts **+ pages (+ services)**, with results **scoped to the active locale**

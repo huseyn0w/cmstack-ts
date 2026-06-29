@@ -48,6 +48,7 @@ beforeEach(() => {
     findActiveById: vi.fn(),
     findByIdWithTranslations: vi.fn(),
     findPublicBySlug: vi.fn(),
+    findRelatedPublic: vi.fn(),
     publicByAuthor: vi.fn(),
     listAndCount: vi.fn(),
     update: vi.fn(),
@@ -487,5 +488,37 @@ describe('PostsService.upsertTranslation', () => {
       new Prisma.PrismaClientKnownRequestError('x', { code: 'P2025', clientVersion: '6' }),
     );
     await expect(service.deleteTranslation('p1', 'de')).resolves.toBeUndefined();
+  });
+});
+
+describe('PostsService.findRelated', () => {
+  it('returns [] for an unknown slug without querying candidates', async () => {
+    posts.findPublicBySlug.mockResolvedValue(null);
+    await expect(service.findRelated('missing')).resolves.toEqual([]);
+    expect(posts.findRelatedPublic).not.toHaveBeenCalled();
+  });
+
+  it('returns [] when the source post has no taxonomy', async () => {
+    posts.findPublicBySlug.mockResolvedValue(postRow({ categories: [], tags: [] }));
+    await expect(service.findRelated('title')).resolves.toEqual([]);
+    expect(posts.findRelatedPublic).not.toHaveBeenCalled();
+  });
+
+  it('ranks candidates by shared taxonomy and caps at the limit', async () => {
+    const cat = (id: string) =>
+      ({ id, name: id, slug: id }) as PostWithRelations['categories'][number];
+    posts.findPublicBySlug.mockResolvedValue(
+      postRow({ id: 'src', categories: [cat('c1'), cat('c2')], tags: [] }),
+    );
+    posts.findRelatedPublic.mockResolvedValue([
+      postRow({ id: 'a', slug: 'a', categories: [cat('c1')], tags: [] }), // score 1
+      postRow({ id: 'b', slug: 'b', categories: [cat('c1'), cat('c2')], tags: [] }), // score 2
+    ]);
+    const result = await service.findRelated('title', 'en', 1);
+    expect(result.map((p) => p.id)).toEqual(['b']); // highest score, limit 1
+    // source post is excluded + only its taxonomy ids are passed to the repo.
+    const args = posts.findRelatedPublic.mock.calls[0] ?? [];
+    expect(args[0]).toBe('src');
+    expect(args[1]).toEqual(['c1', 'c2']);
   });
 });

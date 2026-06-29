@@ -4,6 +4,7 @@ import {
   type PostDetail,
   type PostList,
   type PostListQuery,
+  type PostSummary,
   localeSchema,
   postListQuerySchema,
 } from '@cmstack-ts/config';
@@ -39,6 +40,15 @@ export class PublicContentController {
   @Get('posts/:slug')
   getPost(@Param('slug') slug: string, @Query('locale') locale?: string): Promise<PostDetail> {
     return this.posts.findPublicBySlug(slug, resolveLocale(locale));
+  }
+
+  @Get('posts/:slug/related')
+  getRelated(
+    @Param('slug') slug: string,
+    @Query('locale') locale?: string,
+    @Query('limit') limit?: string,
+  ): Promise<PostSummary[]> {
+    return this.posts.findRelated(slug, resolveLocale(locale), Number(limit) || 3);
   }
 
   @Get('pages/:slug')

@@ -41,7 +41,8 @@
   },
   "post": {
     "by": "By",
-    "unknownAuthor": "Unknown author"
+    "unknownAuthor": "Unknown author",
+    "related": "Related posts"
   },
   "services": {
     "title": "Services",
