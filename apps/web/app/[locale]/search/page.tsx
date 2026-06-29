@@ -21,12 +21,13 @@ export async function generateMetadata({
   return { title: t('title'), alternates: alternatesFor(locale, '/search') };
 }
 
-async function runSearch(q: string) {
+async function runSearch(q: string, locale: string) {
   if (!q) return null;
   try {
-    const res = await fetch(`${apiBaseUrl}/public/search?q=${encodeURIComponent(q)}`, {
-      cache: 'no-store',
-    });
+    const res = await fetch(
+      `${apiBaseUrl}/public/search?q=${encodeURIComponent(q)}&locale=${encodeURIComponent(locale)}`,
+      { cache: 'no-store' },
+    );
     if (!res.ok) return null;
     const parsed = searchResponseSchema.safeParse(await res.json());
     return parsed.success ? parsed.data : null;
@@ -46,7 +47,7 @@ export default async function SearchPage({
   const { q = '' } = await searchParams;
   const query = q.trim();
   const t = await getTranslations('search');
-  const [{ Layout }, results] = await Promise.all([getActiveTheme(), runSearch(query)]);
+  const [{ Layout }, results] = await Promise.all([getActiveTheme(), runSearch(query, locale)]);
   // Keep the form on the active locale's search path (no prefix for the default).
   const action = localizedPath(locale, '/search', routing.defaultLocale);
 
@@ -103,13 +104,24 @@ export default async function SearchPage({
                       style={{ padding: '1.25rem 0', borderBottom: '1px solid var(--line)' }}
                     >
                       <Link
-                        href={`/blog/${item.slug}`}
+                        href={item.type === 'page' ? `/${item.slug}` : `/blog/${item.slug}`}
                         style={{ color: 'var(--fg)', textDecoration: 'none' }}
                       >
                         <h2 style={{ fontSize: 20, margin: '0 0 0.3rem' }}>{item.title}</h2>
                       </Link>
+                      <span
+                        style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 11,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          color: 'var(--muted)',
+                        }}
+                      >
+                        {t(item.type === 'page' ? 'typePage' : 'typePost')}
+                      </span>
                       {item.excerpt && (
-                        <p style={{ color: 'var(--muted)', margin: 0, fontSize: 15 }}>
+                        <p style={{ color: 'var(--muted)', margin: '0.3rem 0 0', fontSize: 15 }}>
                           {item.excerpt}
                         </p>
                       )}

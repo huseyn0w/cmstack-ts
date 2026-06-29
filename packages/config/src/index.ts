@@ -141,6 +141,8 @@ export {
 export {
   searchQuerySchema,
   type SearchQuery,
+  searchResultTypeSchema,
+  type SearchResultType,
   searchResultSchema,
   type SearchResult,
   searchResponseSchema,

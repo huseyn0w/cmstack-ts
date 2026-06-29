@@ -47,11 +47,22 @@ remaining gaps vs the richest sibling (laravel). **Suggested order (highest valu
    89.95%; **live-verified** (ranking: shared cat+tag scores above shared-tag-only; self excluded;
    no-taxonomy → []; unknown → 200 []; SSR renders the block + de heading "Ähnliche Beiträge"
    with `/de/blog/…` links).
-4. **Search scope + multilingual** — `SearchService`/`SearchRepository`
-   (`apps/api/src/content/search.{service,controller}.ts`) currently searches **posts only**;
-   canon target is posts **+ pages (+ services)**, with results **scoped to the active locale**
-   (§7 #1 logged multilingual FTS as future). Extend the `$queryRaw` FTS (keep the bound
-   param) + the public `/search` UI.
+4. **Search scope + multilingual — DONE** (2026-06-29). FTS now spans published **posts + pages**
+   (`UNION ALL`), **scoped to the active locale**: when a non-default `?locale=` is given the
+   searchable document AND the returned title/excerpt use the per-locale translation overlaid on
+   the base (`LEFT JOIN PostTranslation/PageTranslation` + `coalesce`), so a `de` search matches
+   `de` text and falls back per-field to the base. noindex content is excluded. The user query +
+   locale are both **bound `$queryRaw` params** (never interpolated). The `english` tsvector config
+   is kept for every locale (per-language stemmers stay out of scope, per §7 #1). `SearchRow`/
+   `SearchResult` gained a `type: 'post' | 'page'` discriminator; the public `/search` UI links
+   posts → `/blog/:slug`, pages → `/:slug`, shows a localized type chip (`search.typePost/typePage`
+   en/de/ru), and forwards the active locale. **542 tests** (repo + service specs updated for the
+   new signature/type/locale), typecheck/lint clean; **live-verified** (`q=cms` returns 3 posts + 1
+   page each tagged with its type; `vorgestellt` matches only under `locale=de` (0 under en) and
+   returns the localized title; SSR links `/about` (en) / `/de/about` (de) with "Page"/"Seite" chips).
+   - **Scoped out (logged):** `services` (the `Service` model has no public detail route to link to —
+     wire it in when services get a public surface, mirroring pages); per-language FTS stemmers/
+     dictionaries (canon rates ts search non-multilingual — only the *content* is locale-scoped).
 5. **Self-service password change** (logged-in `/account`: current+new password → API) and an
    **enforced email-verification flow** (the field exists; the flow isn't wired). django/laravel
    have both; lower priority.

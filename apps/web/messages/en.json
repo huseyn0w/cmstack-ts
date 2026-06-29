@@ -55,7 +55,9 @@
     "inputLabel": "Search query",
     "submit": "Search",
     "noResults": "No results for “{query}”.",
-    "results": "{count, plural, one {# result} other {# results}} for “{query}”"
+    "results": "{count, plural, one {# result} other {# results}} for “{query}”",
+    "typePost": "Post",
+    "typePage": "Page"
   },
   "author": {
     "kicker": "Author",

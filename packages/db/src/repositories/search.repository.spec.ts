@@ -11,27 +11,43 @@ function make() {
 }
 
 describe('PrismaSearchRepository', () => {
-  it('searchPosts() passes the user query as a BOUND parameter, never interpolated', async () => {
+  it('search() passes the user query as a BOUND parameter, never interpolated', async () => {
     const { repo, $queryRaw } = make();
     $queryRaw.mockResolvedValue([]);
-    await repo.searchPosts("o'brien; DROP TABLE", 10, 20);
+    await repo.search("o'brien; DROP TABLE", undefined, 10, 20);
 
     const sql = $queryRaw.mock.calls[0]?.[0] as CapturedSql;
     // the raw query value rides in the bound parameter list...
     expect(sql.values).toContain("o'brien; DROP TABLE");
     // ...and is NOT spliced into the SQL text
     expect(sql.sql).not.toContain('DROP TABLE');
-    // ranking + tie-break ordering preserved verbatim
+    // posts AND pages are searched, ranking + tie-break ordering preserved
+    expect(sql.sql).toContain('"Post"');
+    expect(sql.sql).toContain('"Page"');
+    expect(sql.sql).toContain('UNION ALL');
     expect(sql.sql).toContain('NULLS LAST');
     expect(sql.sql).toContain('ts_rank');
+    // default-locale read does NOT join the translation tables
+    expect(sql.sql).not.toContain('PostTranslation');
   });
 
-  it('countPosts() coerces the bigint count to a number and guards empty results', async () => {
+  it('search() with a locale overlays the per-locale translation (bound locale param)', async () => {
+    const { repo, $queryRaw } = make();
+    $queryRaw.mockResolvedValue([]);
+    await repo.search('hello', 'de', 10, 0);
+
+    const sql = $queryRaw.mock.calls[0]?.[0] as CapturedSql;
+    expect(sql.sql).toContain('PostTranslation');
+    expect(sql.sql).toContain('PageTranslation');
+    expect(sql.values).toContain('de'); // locale is a bound parameter
+  });
+
+  it('count() coerces the bigint count to a number and guards empty results', async () => {
     const { repo, $queryRaw } = make();
     $queryRaw.mockResolvedValue([{ count: 7n }]);
-    expect(await repo.countPosts('hello')).toBe(7);
+    expect(await repo.count('hello', undefined)).toBe(7);
 
     $queryRaw.mockResolvedValue([]);
-    expect(await repo.countPosts('hello')).toBe(0);
+    expect(await repo.count('hello', undefined)).toBe(0);
   });
 });
