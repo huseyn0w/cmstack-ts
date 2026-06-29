@@ -11,8 +11,10 @@ export const commentStatusSchema = z.enum(['PENDING', 'APPROVED', 'SPAM', 'TRASH
 export type CommentStatus = z.infer<typeof commentStatusSchema>;
 
 export const createCommentSchema = z.object({
-  authorName: z.string().trim().min(1).max(80),
-  authorEmail: z.string().trim().email().max(200),
+  // Optional: required for guests (enforced server-side), ignored for signed-in
+  // users (their name/email are snapshotted from the account).
+  authorName: z.string().trim().min(1).max(80).optional(),
+  authorEmail: z.string().trim().email().max(200).optional(),
   content: z.string().trim().min(1).max(4000),
   /** Set to reply to another comment (threading). */
   parentId: z.string().min(1).optional(),
@@ -20,6 +22,18 @@ export const createCommentSchema = z.object({
   recaptchaToken: z.string().optional(),
 });
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
+
+/** Edit the content of your own comment (signed-in authors, within the window). */
+export const editCommentSchema = z.object({
+  content: z.string().trim().min(1).max(4000),
+});
+export type EditCommentInput = z.infer<typeof editCommentSchema>;
+
+/**
+ * How long after posting a signed-in author may edit or delete their own comment.
+ * Shared by the API (enforcement) and the web (whether to show the controls).
+ */
+export const COMMENT_EDIT_WINDOW_MINUTES = 15;
 
 export const moderateCommentSchema = z.object({
   status: commentStatusSchema,
@@ -33,6 +47,10 @@ export interface CommentNode {
   authorName: string;
   content: string;
   createdAt: string;
+  /** True when this comment belongs to the requesting (signed-in) viewer. */
+  mine?: boolean;
+  /** True when this (own) comment is awaiting moderation. */
+  pending?: boolean;
   replies: CommentNode[];
 }
 
@@ -42,6 +60,8 @@ export const commentNodeSchema: z.ZodType<CommentNode> = z.lazy(() =>
     authorName: z.string(),
     content: z.string(),
     createdAt: z.string(),
+    mine: z.boolean().optional(),
+    pending: z.boolean().optional(),
     replies: z.array(commentNodeSchema),
   }),
 );

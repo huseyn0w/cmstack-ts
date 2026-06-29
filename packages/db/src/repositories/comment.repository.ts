@@ -24,7 +24,20 @@ export type CommentCreateData = {
   authorEmail: string;
   content: string;
   status: CommentStatus;
+  /** Set when an authenticated user authored the comment (enables self-edit). */
+  userId?: string | null;
 };
+
+/** A comment the requesting user owns — for ownership + edit-window checks. */
+export type OwnedCommentRow = {
+  id: string;
+  status: CommentStatus;
+  createdAt: Date;
+  post: { slug: string };
+};
+
+/** Own comment flattened for the threaded read (carries status for a pending hint). */
+export type OwnFlatCommentRow = FlatCommentRow & { status: CommentStatus };
 
 export type AdminCommentFilter = {
   status?: CommentStatus;
@@ -40,6 +53,12 @@ export interface CommentRepository {
   create(data: CommentCreateData): Promise<AdminCommentRow>;
   /** APPROVED comments for a post, oldest first, WITHOUT author email. */
   listApprovedForPost(postId: string): Promise<FlatCommentRow[]>;
+  /** The viewer's OWN comments for a post (PENDING + APPROVED), oldest first. */
+  listOwnForPost(postId: string, userId: string): Promise<OwnFlatCommentRow[]>;
+  /** A comment owned by `userId` (status/createdAt/post for window + revalidation), or null. */
+  findOwnedById(id: string, userId: string): Promise<OwnedCommentRow | null>;
+  /** Replace a comment's content and send it back to PENDING (re-moderation). */
+  updateOwnContent(id: string, content: string): Promise<void>;
   listAndCount(filter: AdminCommentFilter): Promise<{ items: AdminCommentRow[]; total: number }>;
   exists(id: string): Promise<boolean>;
   updateStatus(id: string, status: CommentStatus): Promise<AdminCommentRow>;
@@ -70,6 +89,34 @@ export class PrismaCommentRepository extends PrismaCrudRepository implements Com
       orderBy: { createdAt: 'asc' },
       select: { id: true, parentId: true, authorName: true, content: true, createdAt: true },
     });
+  }
+
+  listOwnForPost(postId: string, userId: string): Promise<OwnFlatCommentRow[]> {
+    return this.prisma.comment.findMany({
+      where: { postId, userId, status: { in: ['PENDING', 'APPROVED'] } },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        parentId: true,
+        authorName: true,
+        content: true,
+        createdAt: true,
+        status: true,
+      },
+    });
+  }
+
+  findOwnedById(id: string, userId: string): Promise<OwnedCommentRow | null> {
+    return this.prisma.comment.findFirst({
+      where: { id, userId },
+      select: { id: true, status: true, createdAt: true, post: { select: { slug: true } } },
+    });
+  }
+
+  async updateOwnContent(id: string, content: string): Promise<void> {
+    // Editing re-opens moderation: an approved comment returns to PENDING so an
+    // author can't approve-then-swap to spam.
+    await this.prisma.comment.update({ where: { id }, data: { content, status: 'PENDING' } });
   }
 
   async listAndCount(filter: AdminCommentFilter): Promise<{

@@ -1,4 +1,5 @@
 import { apiBaseUrl } from '@/app/lib/api';
+import { auth } from '@/auth';
 import { Comments } from '@/components/blog/comments';
 import { LikeButton } from '@/components/blog/like-button';
 import { RelatedPosts } from '@/components/blog/related-posts';
@@ -53,10 +54,13 @@ async function getRelated(slug: string, locale: string): Promise<PostSummary[]> 
   }
 }
 
-async function getComments(slug: string): Promise<CommentThread> {
+async function getComments(slug: string, accessToken?: string): Promise<CommentThread> {
   try {
+    // A signed-in viewer's bearer makes the API include their own (incl. pending)
+    // comments, flagged `mine`, so they can edit/delete them.
     const res = await fetch(`${apiBaseUrl}/public/posts/${encodeURIComponent(slug)}/comments`, {
       cache: 'no-store',
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
     });
     if (!res.ok) return EMPTY_THREAD;
     const parsed = commentThreadSchema.safeParse(await res.json());
@@ -104,15 +108,18 @@ export default async function BlogPostPage({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
+  const session = await auth();
   const [post, { Layout, BlogPost }, { profile }, thread, like, related] = await Promise.all([
     getPost(slug, locale),
     getActiveTheme(),
     getSeoContent(),
-    getComments(slug),
+    getComments(slug, session?.accessToken),
     getLikeState(slug),
     getRelated(slug, locale),
   ]);
   if (!post) notFound();
+
+  const currentUser = session?.user ? { signedIn: true as const } : { signedIn: false as const };
 
   return (
     <>
@@ -138,7 +145,7 @@ export default async function BlogPostPage({
             initialLiked={like.state.liked}
             signedIn={like.signedIn}
           />
-          <Comments slug={post.slug} initialThread={thread} />
+          <Comments slug={post.slug} initialThread={thread} signedIn={currentUser.signedIn} />
           <RelatedPosts posts={related} />
         </div>
       </Layout>

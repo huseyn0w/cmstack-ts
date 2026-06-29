@@ -24,6 +24,7 @@ import { EmailVerificationController } from './email-verification.controller';
 import { EmailVerificationService } from './email-verification.service';
 import { InternalSecretGuard } from './internal-secret.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
 import { PasswordResetController } from './password-reset.controller';
 import { PasswordResetService } from './password-reset.service';
 import { PasswordService } from './password.service';
@@ -58,6 +59,7 @@ import { UsersService } from './users.service';
     PasswordResetService,
     EmailVerificationService,
     JwtAuthGuard,
+    OptionalJwtAuthGuard,
     PoliciesGuard,
     InternalSecretGuard,
     provideRepository(USER_REPOSITORY, PrismaUserRepository),
@@ -68,6 +70,6 @@ import { UsersService } from './users.service';
   ],
   // Exported so other feature modules can reuse the auth guards (which depend on
   // JwtService + AccountsService) to protect their own routes.
-  exports: [JwtModule, AccountsService, JwtAuthGuard, PoliciesGuard],
+  exports: [JwtModule, AccountsService, JwtAuthGuard, OptionalJwtAuthGuard, PoliciesGuard],
 })
 export class AccountsModule {}

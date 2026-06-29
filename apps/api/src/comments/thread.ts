@@ -6,6 +6,8 @@ export interface FlatComment {
   authorName: string;
   content: string;
   createdAt: string;
+  mine?: boolean;
+  pending?: boolean;
 }
 
 /**
@@ -22,6 +24,8 @@ export function buildCommentThread(flat: FlatComment[]): CommentNode[] {
       authorName: c.authorName,
       content: c.content,
       createdAt: c.createdAt,
+      ...(c.mine ? { mine: true } : {}),
+      ...(c.pending ? { pending: true } : {}),
       replies: [],
     });
   }

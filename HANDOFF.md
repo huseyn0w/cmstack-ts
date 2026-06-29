@@ -2,13 +2,14 @@
 
 **Updated:** 2026-06-28 — **ALL FIVE ENGAGEMENT TASKS COMPLETE — Task 1 (feature parity §7 #1–#10 + all shared net-new) · Task 2 (repository layer) · Task 3 (UI, measured) · Task 4 (tests) · Task 5 (README). MERGED to `main` (fast-forward) and PUSHED to `origin/main`.** · **Branch:** now on `main` (the work branch `refactor/repository-layer` still points at the same tip).
 **Final state:** 519 tests, typecheck + biome clean, coverage 90.42% (gate ≥80%), e2e 11/11. Measured Lighthouse (mobile): A11y 100 / SEO 100 / BP 96 every public page; Perf home 98, content ~93–94 (web-font LCP under throttle — see §Task 3 #5). README rewritten to the shared cross-stack structure.
-**Parity-gap phase (2026-06-29): 5 of 6 gaps DONE + PUSHED** — #1 media picker (`1d8c2fa`),
+**Parity-gap phase (2026-06-29): ALL 6 gaps DONE + PUSHED** — #1 media picker (`1d8c2fa`),
 #2 bulk admin actions (`9271d65`), #3 related posts (`b31a8cf`), #4 search posts+pages/locale
-(`f8fbc12`), #5 password change + email verification (`e657c26`, `6f58e11`). Only #6 (comment
-author self-edit — optional/laravel-only) remains, **deferred by design** (needs authenticated
-commenting wired first — see its entry). **552 tests, typecheck/biome clean, coverage 89.72%
-(gate ≥80%).** **Note:** `../FEATURE_MATRIX.md`'s `ts` column was refreshed earlier (ts status
-cells only; Canonical/Target/other-stack columns untouched).
+(`f8fbc12`), #5 password change + email verification (`e657c26`, `6f58e11`), #6 comment author
+self-edit incl. authenticated commenting (this commit). **560 tests, typecheck/biome clean,
+coverage ~89.7% (gate ≥80%), e2e 11/11.** Two additive reversible migrations this phase
+(`email_verification`; #6 needed none — `Comment.userId` pre-existed). **Note:**
+`../FEATURE_MATRIX.md`'s `ts` column was refreshed (ts status cells only; Canonical/Target/
+other-stack columns untouched).
 
 ## Remaining functional parity gaps (NEXT PHASE — operator directive)
 Cross-checked against the canon `../FEATURE_MATRIX.md` AND the real code (the matrix was a
@@ -97,20 +98,29 @@ remaining gaps vs the richest sibling (laravel). **Suggested order (highest valu
    - **Scoped out (logged):** **enforcement** (blocking actions until verified) is intentionally not
      wired — it risks locking out existing/seed users; introduce it gated/soft when needed. No
      auto-send on register (the user triggers it from `/account`).
-6. **Comment author self-edit** (laravel-only, optional) — **DEFERRED by design.** Blocked on a
-   prerequisite: the public comment submit (`PublicCommentsController.submit` →
-   `CommentsService.submit`) is **fully anonymous today** — it always stores `authorName`/
-   `authorEmail` from the form and **never sets `Comment.userId`** (the column exists but no row
-   populates it), and the web comment form has no signed-in path. So "author edits their own
-   comment" first needs **authenticated commenting** wired (optional-JWT on submit → set `userId`
-   + snapshot the user's name/email, hide the name/email fields when signed in), which carries its
-   own design choices (edit window length, edit-only-while-PENDING vs always, re-moderate on edit).
-   Only then do the self-edit/delete endpoints (`userId` must match + window) + UI make sense.
-   Left for a deliberate follow-up since it is explicitly optional/laravel-only and is a new
-   sub-feature, not a thin gap. **Sketch:** add `submitAuthenticated` path (or make `submit` read an
-   optional bearer), `CommentRepository.findOwnedById(id, userId)`, `PATCH/DELETE
-   /public/.../comments/:id` (JwtAuthGuard, owner + window check, re-set status PENDING on edit),
-   web "edit/delete" affordances on the commenter's own rows.
+6. **Comment author self-edit — DONE** (2026-06-29). Built the prerequisite (authenticated
+   commenting) + self-edit/delete. **No migration** (`Comment.userId` already existed, unused).
+   - **Authenticated commenting:** new `OptionalJwtAuthGuard` (authenticates if a bearer is present,
+     else proceeds anonymously, never rejects) on the public submit + read. `CommentsService.submit`
+     takes an optional `CommentViewer` — a signed-in author is **attributed** (`userId` set,
+     name/email **snapshotted from the account**, body name/email ignored, **recaptcha skipped**);
+     guests still need name+email and pass the spam check (`createCommentSchema` name/email made
+     optional, enforced server-side for guests).
+   - **Self-edit/delete:** `CommentRepository.findOwnedById(id, userId)` / `listOwnForPost` /
+     `updateOwnContent` (resets to PENDING — re-moderation). `PATCH /public/posts/:slug/comments/:id`
+     + `DELETE …/:id` (JwtAuthGuard; owner-or-404; **edit window** `COMMENT_EDIT_WINDOW_MINUTES`=15
+     enforced, else 403). The threaded read, when authenticated, **merges the viewer's own
+     comments (incl. PENDING)** flagged `mine`/`pending` (others never see another user's pending
+     comment; `total` still counts approved only).
+   - **Web:** the comment form hides name/email when signed in and submits via a server action
+     (`submitAuthenticatedComment`, session token server-side — keeps the guest browser-POST path
+     for real-IP throttle); `mine` comments within the window get inline **Edit**/**Delete**
+     (server actions + `router.refresh()`); a "You · awaiting moderation" hint on own pending rows.
+   - **560 tests** (+8 service), typecheck/lint clean; **live-verified** (authenticated submit 201
+     attributed as the account name; own PENDING appears flagged `mine` for the viewer but is absent
+     anonymously; edit own 200 + content updated; cross-user edit 404; delete own 204; unauth 401).
+   - **Scoped out (logged):** edit window applies to delete too (consistent); self-delete cascades
+     to replies (same as admin delete); no edit history/audit of self-edits.
 
 **Out of v1 scope per the matrix (do NOT build unless asked):** custom content types,
 comments on pages, external search engine (ES/Algolia), custom form builder, GraphQL/tRPC,
